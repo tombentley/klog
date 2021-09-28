@@ -65,16 +65,16 @@ public class SegmentDumpReader {
             "CreateTime: (?<createTime>[0-9]+) " +
             "size: (?<size>[0-9]+) " +
             "magic: (?<magic>[0-9]+) " +
-            "compresscodec: (?<compressCodec>[A-Z]+) " +
+            "compresscodec: (?<compressCodec>none|[A-Z]+) " +
             "crc: (?<crc>[0-9]+) " +
             "isvalid: (?<isValid>true|false)");
 
     private final static Pattern DATA_RECORD_PATTERN = Pattern.compile("\\| offset: (?<offset>[0-9]+) " +
-            "CreateTime: (?<createTime>[0-9]+) " +
-            "keysize: (?<keySize>[0-9]+) " +
-            "valuesize: (?<valueSize>-?[0-9]+) " +
+            "[Cc]reateTime: (?<createTime>[0-9]+) " +
+            "key[Ss]ize: (?<keySize>-?[0-9]+) " +
+            "value[Ss]ize: (?<valueSize>-?[0-9]+) " +
             "sequence: (?<sequence>-?[0-9]+) " +
-            "headerKeys: \\[(?<headerKeys>.*)\\]");
+            "header[Kk]eys: \\[(?<headerKeys>.*)\\]( payload:.*)?");
 
     private final static Pattern CONTROL_RECORD_PATTERN = Pattern.compile(DATA_RECORD_PATTERN.pattern() + " " +
             "endTxnMarker: (?<endTxnMarker>COMMIT|ABORT) " +
@@ -90,20 +90,33 @@ public class SegmentDumpReader {
             "txnLastUpdateTimestamp=(?<txnLastUpdateTimestamp>[0-9]+)," +
             "txnTimeoutMs=(?<txnTimeoutMs>[0-9]+)");
 
-    Stream<Located> readSegment2(File dumpFile) throws IOException {
+    SegmentInfo readSegment(File dumpFile) throws IOException {
+        Stream<String> lines = Files.lines(dumpFile.toPath());
+        return readSegment(dumpFile.getName(), lines);
+    }
+
+    SegmentInfo readSegment(String dumpFileName, Stream<String> lines) {
         File[] segmentFile = {null};
-        Spliterator<String> spliterator = Files.lines(dumpFile.toPath()).spliterator();
-        if (!spliterator.tryAdvance(line -> segmentFile[0] = this.readDumpingLine(line))) {
+        int[] lineNumber = {0};
+        Spliterator<String> spliterator = lines.spliterator();
+        if (!spliterator.tryAdvance(line -> {
+            lineNumber[0]++;
+            segmentFile[0] = this.readDumpingLine(line);
+        })) {
             throw new UnexpectedFileContent("Expected > 1 lines");
         }
-        SegmentType segmentType = segmentType(dumpFile, segmentFile[0]);
-        if (!spliterator.tryAdvance(line -> this.readStartingOffsetLine(segmentFile[0], line))) {
+        SegmentType segmentType = segmentType(dumpFileName, segmentFile[0]);
+        if (!spliterator.tryAdvance(line -> {
+            lineNumber[0]++;
+            this.readStartingOffsetLine(segmentFile[0], line);
+        })) {
             throw new UnexpectedFileContent("Expected > 2 lines");
         }
         int[] expect = {0};
         return StreamSupport.stream(spliterator, false).map(line -> {
-            if (expect[0] == 0) {
-                var batch = parseBatch(segmentType, line, dumpFile.getName(), -1);
+            lineNumber[0]++;
+            if (expect[0] == 0 || !line.startsWith("| ")) { // if dumped without --deep-iteration then expect is of no value.
+                var batch = parseBatch(segmentType, line, dumpFileName, lineNumber[0]);
                 if (batch.isControl()) {
                     expect[0] = -batch.count();
                 } else {
@@ -113,99 +126,19 @@ public class SegmentDumpReader {
             } else if (expect[0] > 0) {
                 BaseMessage result;
                 if (segmentType == SegmentType.TRANSACTION_STATE) {
-                    result = parseTransactionState(expect[0], line, dumpFile.getName(), -1);
+                    result = parseTransactionState(expect[0], line, dumpFileName, lineNumber[0]);
                 } else {
-                    result = parseData(expect[0], line, dumpFile.getName(), -1);
+                    result = parseData(expect[0], line, dumpFileName, lineNumber[0]);
                 }
                 expect[0]--;
                 return result;
             } else {
-                var control = parseControl(expect[0], line, dumpFile.getName(), -1);
+                var control = parseControl(expect[0], line, dumpFileName, lineNumber[0]);
                 expect[0]++;
                 return control;
             }
-        });
+        }).collect(SegmentInfoCollector.collector());
     }
-
-//    SegmentInfo readSegment(File file, InputStream in, BiConsumer<SegmentType, Batch> batchConsumer, BiConsumer<SegmentType, BaseMessage> messageConsumer) throws IOException {
-//        String filename = file.getName();
-//        LineNumberReader reader = new LineNumberReader(new InputStreamReader(in));
-//        // e.g. Dumping /var/lib/kafka/data-0/kafka-vol-1/my-topic-1/00000000000002226094.log
-//
-//        String line = reader.readLine();
-//        File segmentFile = readDumpingLine(line);
-//        SegmentType segmentType = segmentType(file, segmentFile);
-//
-//        // e.g. Starting offset: 2226094
-//        line = reader.readLine();
-//        long startingOffset = readStartingOffsetLine(segmentFile, line);
-//        var openTransactions = new HashMap<ProducerSession, FirstBatchInTxn>();
-//        var emptyTransactions = new ArrayList<EmptyTransaction>();
-//        Batch firstBatch = null;
-//        Batch batch = null;
-//        int expect = 0;
-//        // 0 => expecting a batch line, > 0 => expecting that $expect data message, < 0 expecting -$expect many control messages
-//
-//        while (true) {
-//            line = reader.readLine();
-//            if (line == null) {
-//                break;
-//            }
-//            try {
-//                if (expect == 0) {
-//                    batch = parseBatch(segmentType, line, filename, reader.getLineNumber());
-//                    if (firstBatch == null) {
-//                        firstBatch = batch;
-//                        // This only works for topics with cleanup.policy: delete
-////                        if (startingOffset != firstBatch.baseOffset()) {
-////                            throw new UnexpectedFileContent("The 2nd line of the file claims the starting offset is " + startingOffset + ", but first message has base offset " + firstBatch.baseOffset());
-////                        }
-//                        // TODO support inferring whether any compaction has taken place
-//                    }
-//                    if (batch.isControl()) {
-//                        expect = -batch.count();
-//                    } else {
-//                        expect = batch.count();
-//                    }
-//                    if (batch.isTransactional()) {
-//                        ProducerSession session = new ProducerSession(batch.producerId(), batch.producerEpoch());
-//                        if (batch.isControl()) {
-//                            if (batch.count() != 1) {
-//                                throw new UnexpectedFileContent("Transactional data batch with >1 control records");
-//                            }
-//                            // Defer removal from openTransactions till we've seen the control record
-//                        } else {
-//                            var firstInBatch = openTransactions.get(session);
-//                            if (firstInBatch == null) {
-//                                openTransactions.put(session, new FirstBatchInTxn(filename, reader.getLineNumber(), batch, new AtomicInteger(1)));
-//                            } else {
-//                                firstInBatch.numDataBatches().incrementAndGet();
-//                            }
-//                        }
-//                    }
-//                } else if (expect > 0) {
-//                    if (segmentType == SegmentType.TRANSACTION_STATE) {
-//                        var txn = parseTransactionState(expect, line, filename, reader.getLineNumber());
-//                        messageConsumer.accept(segmentType, txn);
-//                    } else {
-//                        var data = parseData(expect, line, filename, reader.getLineNumber());
-//                        messageConsumer.accept(segmentType, data);
-//                    }
-//                    expect--;
-//                } else {
-//                    var control = parseControl(expect, line, filename, reader.getLineNumber());
-//                    var removed = openTransactions.remove(batch.session());
-//                    if (removed == null) {
-//                        emptyTransactions.add(new EmptyTransaction(filename, reader.getLineNumber(), batch, control));
-//                    }
-//                    expect++;
-//                }
-//            } catch (Exception e) {
-//                throw new RuntimeException(String.format("%s:%d:", file, reader.getLineNumber()), e);
-//            }
-//        }
-//        return new SegmentInfo(file, segmentType, openTransactions, firstBatch, batch, emptyTransactions);
-//    }
 
     private void checkBatch(SegmentType segmentType, Batch batch) {
         if (segmentType == SegmentType.TRANSACTION_STATE) {
@@ -225,7 +158,7 @@ public class SegmentDumpReader {
         }
     }
 
-    private SegmentType segmentType(File dumpFile, File segmentFile) {
+    private SegmentType segmentType(String dumpFilename, File segmentFile) {
         SegmentType segmentType;
         File parent = segmentFile.getParentFile();
         if (parent != null) {
@@ -234,7 +167,7 @@ public class SegmentDumpReader {
                           name.matches(SegmentType.CONSUMER_OFFSETS.topicName + "-[0-9]+") ? SegmentType.CONSUMER_OFFSETS : SegmentType.DATA;
         } else {
             // Can happen if kafka-dump-log.sh run from the directory containing the segment
-            System.err.printf("%s: Don't know original segment file name, assuming a normal segment", dumpFile);
+            System.err.printf("%s: Don't know original segment file name, assuming a normal segment", dumpFilename);
             segmentType = SegmentType.DATA;
         }
         return segmentType;
@@ -368,52 +301,18 @@ public class SegmentDumpReader {
         checkBatch(segmentType, currentBatch);
         return currentBatch;
     }
-//
-//    private void readSegments(List<File> args) {
-//        List<File> sortedFiles = args.stream().sorted().collect(Collectors.toList());
-//        SegmentInfo prevInfo = null;
-//        for (var file : sortedFiles) {
-//            try {
-//                try (var in = new FileInputStream(file)) {
-//                    var info = readSegment(file, in,
-//                            (type, batch) -> {},
-//                            (type, message) -> {
-//                                if (message instanceof TransactionStateChangeMessage
-//                                        && ((TransactionStateChangeMessage) message).producerEpoch() == 0
-//                                        && ((TransactionStateChangeMessage) message).producerId() == 961000) {
-//                                    //System.err.println(message);
-//                                }
-//                            });
-//                    if (prevInfo != null &&
-//                            info.firstBatch().baseOffset() <= prevInfo.lastBatch().lastOffset()) {
-//                        throw new UnexpectedFileContent(prevInfo.dumpFile() + " offset incompatible with " + info.dumpFile());
-//                    }
-//                    // TODO carry open transactions over between segments
-//                    System.err.println("First batch " + info.firstBatch());
-//                    info.emptyTransactions().forEach(txn -> System.err.println("Empty transaction " + txn));
-//                    System.err.println("Last batch " + info.lastBatch());
-//                    info.openTransactions().forEach((session, firstBatch) -> {
-//                        System.err.println("Still open transaction: " + session + " -> " + firstBatch);
-//                    });
-//                    prevInfo = info;
-//                }
-//            } catch (IOException e) {
-//                throw new UncheckedIOException(e);
-//            }
-//        }
-//    }
 
     static class SegmentInfoCollector {
 
         private Batch currentBatch;
-        private Map<ProducerSession, FirstBatchInTxn> openTransactions = new HashMap<>();
+        private final Map<ProducerSession, FirstBatchInTxn> openTransactions = new HashMap<>();
         private Batch firstBatch;
-        private List<EmptyTransaction> emptyTransactions = new ArrayList<>();
-        private IntSummaryStatistics txnSizeStats = new IntSummaryStatistics();
-        private IntSummaryStatistics txnDurationStats = new IntSummaryStatistics();
+        private final List<EmptyTransaction> emptyTransactions = new ArrayList<>();
+        private final IntSummaryStatistics txnSizeStats = new IntSummaryStatistics();
+        private final IntSummaryStatistics txnDurationStats = new IntSummaryStatistics();
         private long committed = 0;
         private long aborted = 0;
-        private Map<ProducerSession, TransactionStateChangeMessage.State> transactions = new HashMap<>();
+        private final Map<ProducerSession, TransactionStateChangeMessage.State> transactions = new HashMap<>();
 
         public SegmentInfoCollector() {
         }
@@ -498,7 +397,7 @@ public class SegmentDumpReader {
         //segmentDumpReader.readSegments(Arrays.stream(args).map(File::new).collect(Collectors.toList()));
         Arrays.stream(args).map(File::new).map(dumpFile -> {
             try {
-                return segmentDumpReader.readSegment2(dumpFile).collect(SegmentInfoCollector.collector());
+                return segmentDumpReader.readSegment(dumpFile);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
