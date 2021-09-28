@@ -24,7 +24,9 @@ import java.time.Instant;
  * | offset: 2250124 CreateTime: 1631107105295 keysize: 4 valuesize: 6 sequence: -1 headerKeys: [] endTxnMarker: COMMIT coordinatorEpoch: 522
  * </pre>
  */
-public record ControlMessage(long offset,
+public record ControlMessage(String filename,
+                             int line,
+                             long offset,
                              long createTime,
                              int keySize,
                              int valueSize,

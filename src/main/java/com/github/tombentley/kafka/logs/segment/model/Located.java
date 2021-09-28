@@ -1,4 +1,4 @@
-package com.github.tombentley.kafka.logs.segment;/*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -14,12 +14,10 @@ package com.github.tombentley.kafka.logs.segment;/*
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.github.tombentley.kafka.logs.segment.model;
 
-import java.util.concurrent.atomic.AtomicInteger;
+public interface Located {
+    String filename();
+    int line();
 
-import com.github.tombentley.kafka.logs.segment.model.Batch;
-
-/**
- * The first batch in a transaction.
- */
-public record FirstBatchInTxn(Batch firstBatchInTxn, AtomicInteger numDataBatches) { }
+}

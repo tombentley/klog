@@ -19,7 +19,7 @@ package com.github.tombentley.kafka.logs.segment.model;
 /**
  * Common interface for different kinds of message
  */
-public interface BaseMessage {
+public interface BaseMessage extends Located {
     long offset();
     long createTime();
     int keySize();

@@ -27,7 +27,9 @@ import java.time.Instant;
  * CreateTime: 1631107105272 size: 1105 magic: 2 compresscodec: ZSTD crc: 1835494165 isvalid: true
  * </pre>
  */
-public record Batch(long baseOffset,
+public record Batch(String filename,
+                    int line,
+                    long baseOffset,
                     long lastOffset,
                     int count,
                     int baseSequence,
@@ -43,7 +45,7 @@ public record Batch(long baseOffset,
                     byte magic,
                     String compressCodec,
                     int crc,
-                    boolean isValid) {
+                    boolean isValid) implements Located {
 
     @Override
     public String toString() {

@@ -18,6 +18,7 @@ package com.github.tombentley.kafka.logs.segment;
 
 import com.github.tombentley.kafka.logs.segment.model.Batch;
 import com.github.tombentley.kafka.logs.segment.model.ControlMessage;
+import com.github.tombentley.kafka.logs.segment.model.Located;
 
 /**
  * Represents a transaction that was committed/aborted without any data.
@@ -32,4 +33,4 @@ import com.github.tombentley.kafka.logs.segment.model.ControlMessage;
  *
  * And empty committed transaction is a bug.
  */
-public record EmptyTransaction(String file, int line, Batch closingBatch, ControlMessage controlMessage) { }
+public record EmptyTransaction(Batch closingBatch, ControlMessage controlMessage) { }

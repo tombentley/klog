@@ -27,7 +27,9 @@ import java.time.Instant;
  * partitions=[],txnLastUpdateTimestamp=1630834794890,txnTimeoutMs=120000
  * </pre>
  */
-public record TransactionStateChangeMessage(long offset,
+public record TransactionStateChangeMessage(String filename,
+                                            int line,
+                                            long offset,
                                             long createTime,
                                             int keySize,
                                             int valueSize,
@@ -41,13 +43,49 @@ public record TransactionStateChangeMessage(long offset,
                                             long txnLastUpdateTimestamp,
                                             long txnTimeoutMs) implements TransactionStateMessage {
     public enum State {
-        Ongoing,
-        PrepareCommit,
-        PrepareAbort,
-        CompleteCommit,
-        CompleteAbort,
-        Empty,
-        Dead
+        Ongoing {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == Ongoing || previous == CompleteAbort || previous == CompleteCommit || previous == Empty;
+            }
+        },
+        PrepareCommit {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == Ongoing;
+            }
+        },
+        PrepareAbort {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == Ongoing;
+            }
+        },
+        CompleteCommit {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == PrepareCommit;
+            }
+        },
+        CompleteAbort {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == PrepareAbort;
+            }
+        },
+        Empty {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == CompleteAbort || previous == CompleteCommit || previous == Empty;
+            }
+        },
+        Dead {
+            @Override
+            public boolean validPrevious(State previous) {
+                return previous == Empty || previous == CompleteAbort || previous == CompleteCommit;
+            }
+        };
+        public abstract boolean validPrevious(State previous);
     }
 
     @Override
@@ -67,6 +105,10 @@ public record TransactionStateChangeMessage(long offset,
                 ", txnLastUpdateTimestamp=" + Instant.ofEpochMilli(txnLastUpdateTimestamp) +
                 ", txnTimeoutMs=" + txnTimeoutMs +
                 ')';
+    }
+
+    public ProducerSession session() {
+        return new ProducerSession(producerId, producerEpoch);
     }
 }
 

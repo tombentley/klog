@@ -16,18 +16,19 @@
  */
 package com.github.tombentley.kafka.logs.segment;
 
-import java.io.File;
+import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Map;
 
 import com.github.tombentley.kafka.logs.segment.model.Batch;
 import com.github.tombentley.kafka.logs.segment.model.ProducerSession;
 
-record SegmentInfo(File dumpFile,
-                   SegmentType type,
-                   Map<ProducerSession, FirstBatchInTxn> openTransactions,
+record SegmentInfo(Map<ProducerSession, FirstBatchInTxn> openTransactions,
                    Batch firstBatch,
                    Batch lastBatch,
-                   List<EmptyTransaction> emptyTransactions) {
+                   List<EmptyTransaction> emptyTransactions,
+                   long committed, long aborted,
+                   IntSummaryStatistics txnSizeStats,
+                   IntSummaryStatistics txnDurationStats) {
 
 }

@@ -26,7 +26,9 @@ import java.time.Instant;
  * key: transaction_metadata::transactionalId=MY_TXNAL_ID payload: <DELETE>
  * </pre>
  */
-public record TransactionStateDeletion(long offset,
+public record TransactionStateDeletion(String filename,
+                                       int line,
+                                       long offset,
                                        long createTime,
                                        int keySize,
                                        int valueSize,

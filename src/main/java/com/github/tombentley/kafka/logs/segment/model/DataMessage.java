@@ -24,12 +24,14 @@ import java.time.Instant;
  * | offset: 2250123 CreateTime: 1631107105272 keysize: 52 valuesize: 2470 sequence: 756 headerKeys: [SOME_HEADER,SOME_OTHER_HEADER]
  * </pre>
  */
-public record DataMessage(long offset,
-                      long createTime,
-                      int keySize,
-                      int valueSize,
-                      int sequence,
-                      String headerKeys) implements BaseMessage {
+public record DataMessage(String filename,
+                          int line,
+                          long offset,
+                          long createTime,
+                          int keySize,
+                          int valueSize,
+                          int sequence,
+                          String headerKeys) implements BaseMessage {
     @Override
     public String toString() {
         return "DataMessage(" +
