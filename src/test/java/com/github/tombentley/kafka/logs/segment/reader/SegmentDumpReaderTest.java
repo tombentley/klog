@@ -1,13 +1,3 @@
-package com.github.tombentley.kafka.logs.segment.reader;
-
-import com.github.tombentley.kafka.logs.segment.reader.SegmentDumpReader;
-import com.github.tombentley.kafka.logs.segment.reader.SegmentInfo;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements. See the NOTICE file distributed with
@@ -24,6 +14,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.github.tombentley.kafka.logs.segment.reader;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 class SegmentDumpReaderTest {
 
     /** Without --deep-iteration */
@@ -35,7 +33,9 @@ class SegmentDumpReaderTest {
                 baseOffset: 0 lastOffset: 1 count: 2 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 0 CreateTime: 1632815304456 size: 88 magic: 2 compresscodec: none crc: 873053997 isvalid: true
                 baseOffset: 2 lastOffset: 2 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 88 CreateTime: 1632815305550 size: 75 magic: 2 compresscodec: none crc: 945198711 isvalid: true
                 baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true""";
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines());
+        SegmentInfo segmentInfo = new SegmentDumpReader()
+                .readSegment("<test-input>", content.lines())
+                .batches().collect(SegmentInfoCollector.collector());
         assertEquals(0, segmentInfo.firstBatch().baseOffset());
         assertEquals(1, segmentInfo.firstBatch().lastOffset());
         assertFalse(segmentInfo.firstBatch().isTransactional());
@@ -64,7 +64,9 @@ class SegmentDumpReaderTest {
                baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true
                | offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: []
                """;
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines());
+        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+                .batches()
+                .collect(SegmentInfoCollector.collector());
         assertEquals(0, segmentInfo.firstBatch().baseOffset());
         assertEquals(1, segmentInfo.firstBatch().lastOffset());
         assertFalse(segmentInfo.firstBatch().isTransactional());
@@ -93,7 +95,9 @@ class SegmentDumpReaderTest {
                 baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true
                 | offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: [] payload: 65u5k6uk,yj
                 """;
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines());
+        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+                .batches()
+                .collect(SegmentInfoCollector.collector());
         assertEquals(0, segmentInfo.firstBatch().baseOffset());
         assertEquals(1, segmentInfo.firstBatch().lastOffset());
         assertFalse(segmentInfo.firstBatch().isTransactional());
@@ -110,7 +114,7 @@ class SegmentDumpReaderTest {
 
     /** --deep-iteration */
     @Test
-    public void testWithDeepIterationOnLogWithControlRecords() {
+    public void testWithDeepIterationWithControlRecords() {
         var content = """
                 Dumping /tmp/kafka-0-logs/transactional-foo-0/00000000000000000000.log
                 Starting offset: 0
@@ -128,7 +132,9 @@ class SegmentDumpReaderTest {
                 baseOffset: 6 lastOffset: 6 count: 1 baseSequence: -1 lastSequence: -1 producerId: 0 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: true isControl: true position: 407 CreateTime: 1632840912595 size: 78 magic: 2 compresscodec: none crc: 1079808135 isvalid: true
                 | offset: 6 CreateTime: 1632840912595 keySize: 4 valueSize: 6 sequence: -1 headerKeys: [] endTxnMarker: COMMIT coordinatorEpoch: 4
                 """;
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines());
+        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+                .batches()
+                .collect(SegmentInfoCollector.collector());
         assertEquals(0, segmentInfo.firstBatch().baseOffset());
         assertEquals(1, segmentInfo.firstBatch().lastOffset());
         assertTrue(segmentInfo.firstBatch().isTransactional());
@@ -166,7 +172,10 @@ class SegmentDumpReaderTest {
                 baseOffset: 6 lastOffset: 6 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 4 isTransactional: false isControl: false position: 836 CreateTime: 1632840912607 size: 120 magic: 2 compresscodec: none crc: 1098902730 isvalid: true
                 | offset: 6 CreateTime: 1632840912607 keySize: 15 valueSize: 37 sequence: -1 headerKeys: [] key: transaction_metadata::transactionalId=my-txnal-id payload: producerId:0,producerEpoch:0,state=CompleteCommit,partitions=[],txnLastUpdateTimestamp=1632840912593,txnTimeoutMs=60000
                 """;
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines());
+        SegmentInfo segmentInfo = new SegmentDumpReader()
+                .readSegment("<test-input>", content.lines())
+                .batches()
+                .collect(SegmentInfoCollector.collector());
         assertEquals(0, segmentInfo.firstBatch().baseOffset());
         assertEquals(0, segmentInfo.firstBatch().lastOffset());
         assertFalse(segmentInfo.firstBatch().isTransactional());
