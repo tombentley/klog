@@ -16,18 +16,30 @@
  */
 package com.github.tombentley.klog;
 
-import com.github.tombentley.klog.segment.cli.SegmentDump;
-import io.quarkus.picocli.runtime.annotations.TopCommand;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
-@TopCommand
-@Command(name = "klog",
-        description = "Analyse segment dumps from `kafka-dump-logs.sh`",
-        subcommands = {
-                SegmentDump.class,
-                TxnCoordinatingPartition.class,
-                GroupCoordinatingPartition.class
-        }
+@Command(name="txn-coordinating-partition",
+    description = "Determine the coordinating partition of __transaction_state for a given transactional.id"
 )
-public class Klog {
+public class TxnCoordinatingPartition implements Runnable {
+
+    @Parameters(arity = "1", index = "0",
+            description = "The transactional.id")
+    String id;
+
+    @Option(names = "num-partitions",
+        description = "The number of partitions of __transaction_state",
+    defaultValue = "50")
+    int partitions;
+
+    @Override
+    public void run() {
+        System.out.println(abs(id.hashCode()) % partitions);
+    }
+
+    private int abs(int n) {
+        return (n == Integer.MIN_VALUE) ? 0 : Math.abs(n);
+    }
 }
