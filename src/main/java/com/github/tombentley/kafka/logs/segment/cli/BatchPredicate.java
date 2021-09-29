@@ -15,5 +15,28 @@
  * limitations under the License.
  */
 package com.github.tombentley.kafka.logs.segment.cli;
-public class BatchPredicate {
+
+import java.util.function.Predicate;
+
+import com.github.tombentley.kafka.logs.segment.model.Batch;
+
+class BatchPredicate {
+    static Predicate<Batch> predicate(Integer pid, Integer producerEpoch, Integer leaderEpoch) {
+        Predicate<Batch> predicate = null;
+        if (pid != null) {
+            int pidPrim = pid;
+            predicate = batch -> batch.producerId() == pidPrim;
+        }
+        if (producerEpoch != null) {
+            int pe = producerEpoch;
+            Predicate<Batch> producerPred = batch -> batch.producerEpoch() == pe;
+            predicate = predicate != null ? predicate.and(producerPred) : producerPred;
+        }
+        if (leaderEpoch != null) {
+            int le = leaderEpoch;
+            Predicate<Batch> leaderPred = batch -> batch.partitionLeaderEpoch() == le;
+            predicate = predicate != null ? predicate.and(leaderPred) : leaderPred;
+        }
+        return predicate;
+    }
 }
