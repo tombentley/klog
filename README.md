@@ -17,7 +17,7 @@ You can build a native executable:
 You can copy the executable to some directory in your `$PATH`, for example:
 
 ```shell
-sudo cp target/kafka-logs-tool-*-SNAPSHOT-runner ~/usr/bin/klog
+sudo cp target/klog-*-SNAPSHOT-runner ~/usr/bin/klog
 ```
 
 Alternatively you can use alias in your shell session:
