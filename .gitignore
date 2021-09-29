@@ -1,4 +1,4 @@
 .idea/
-kafka-dump-logs-tool.iml
 target/
 dependency-reduced-pom.xml
+klog.iml
