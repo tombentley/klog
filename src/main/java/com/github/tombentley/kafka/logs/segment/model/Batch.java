@@ -17,6 +17,7 @@
 package com.github.tombentley.kafka.logs.segment.model;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * A batch of messages.
@@ -45,7 +46,8 @@ public record Batch(String filename,
                     byte magic,
                     String compressCodec,
                     int crc,
-                    boolean isValid) implements Located {
+                    boolean isValid,
+                    List<BaseMessage> messages) implements Located {
 
     @Override
     public String toString() {

@@ -14,21 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.kafka.logs.segment;
-
-import java.util.IntSummaryStatistics;
-import java.util.List;
-import java.util.Map;
-
-import com.github.tombentley.kafka.logs.segment.model.Batch;
-import com.github.tombentley.kafka.logs.segment.model.ProducerSession;
-
-record SegmentInfo(Map<ProducerSession, FirstBatchInTxn> openTransactions,
-                   Batch firstBatch,
-                   Batch lastBatch,
-                   List<EmptyTransaction> emptyTransactions,
-                   long committed, long aborted,
-                   IntSummaryStatistics txnSizeStats,
-                   IntSummaryStatistics txnDurationStats) {
-
+package com.github.tombentley.kafka.logs.segment.cli;
+public class BatchPredicate {
 }

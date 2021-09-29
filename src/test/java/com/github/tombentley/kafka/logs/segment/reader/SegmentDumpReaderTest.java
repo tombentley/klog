@@ -1,5 +1,7 @@
-package com.github.tombentley.kafka.logs.segment;
+package com.github.tombentley.kafka.logs.segment.reader;
 
+import com.github.tombentley.kafka.logs.segment.reader.SegmentDumpReader;
+import com.github.tombentley.kafka.logs.segment.reader.SegmentInfo;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -178,5 +180,8 @@ class SegmentDumpReaderTest {
         assertEquals(0, segmentInfo.txnSizeStats().getCount());
         assertEquals(0, segmentInfo.txnDurationStats().getCount());
     }
+
+    // TODO simulate hanging transaction
+    // TODO test for the txn state machine
 
 }
