@@ -20,14 +20,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Spliterator;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.github.tombentley.klog.segment.model.BaseMessage;
 import com.github.tombentley.klog.segment.model.Batch;
 import com.github.tombentley.klog.segment.model.ControlMessage;
 import com.github.tombentley.klog.segment.model.DataMessage;
@@ -153,41 +155,155 @@ public class SegmentDumpReader {
             }
             deepIteration = maybeFirstMessageLine[0] != null && maybeFirstMessageLine[0].startsWith("| ");
             lineNumber[0] -= 2;
-            batches = batches(dumpFileName, lineNumber, type, deepIteration,
+            batches = batches(dumpFileName, lineNumber[0], type, deepIteration,
                     Stream.concat(builder.build(), StreamSupport.stream(spliterator, false)));
         }
         return new Segment(dumpFileName, type, topicName(segmentFile[0]), deepIteration, batches);
     }
 
-    private Stream<Batch> batches(String dumpFileName, int[] lineNumber, Segment.Type type, boolean deepIteration, Stream<String> concat) {
-        int[] expect = {0};
-        Batch[] currentBatch = {null};
+    private Stream<Batch> batches(String dumpFileName, int lineNum, Segment.Type type, boolean deepIteration, Stream<String> concat) {
+        Stream<Batch> batchStream = concat.flatMap(new Function<String, Stream<? extends Batch>>() {
+            int lineNumber = lineNum;
+            int expect = 0;
+            Matcher batchMatcher = null;
+            int batchLineNumber = 0;
+            BaseMessage[] messages = null;
+            int i = 0;
+            @Override
+            public Stream<? extends Batch> apply(String line) {
+                lineNumber++;
+                if (expect == 0 || !deepIteration) { // if dumped without --deep-iteration then expect is of no value.
+                    batchLineNumber = lineNumber;
+                    var matcher = matchBatch(line);
+                    int count = parseInt(matcher.group("count"));
+                    if (parseBoolean(matcher.group("isControl"))) {
+                        expect = -count;
+                    } else {
+                        expect = count;
+                    }
+                    i = 0;
+                    messages = new BaseMessage[count];
+                    batchMatcher = matcher;
+                } else if (expect > 0) {
+                    if (type == Segment.Type.TRANSACTION_STATE) {
+                        messages[i++] = parseTransactionState(line, dumpFileName);
+                    } else {
+                        messages[i++] = parseData(line, dumpFileName);
+                    }
+                    expect--;
+                } else {
+                    messages[i++] = parseControl(line, dumpFileName);
+                    expect++;
+                }
 
-        Stream<Batch> batchStream = concat.flatMap(line -> {
-            lineNumber[0]++;
-            if (expect[0] == 0 || !deepIteration) { // if dumped without --deep-iteration then expect is of no value.
-                var batch = parseBatch(type, line, dumpFileName, lineNumber[0]);
-                if (batch.isControl()) {
-                    expect[0] = -batch.count();
+                if (!deepIteration || expect == 0) {
+                    return Stream.of(parseBatch(deepIteration ? List.of(messages) : List.of(), dumpFileName));
                 } else {
-                    expect[0] = batch.count();
+                    return Stream.empty();
                 }
-                currentBatch[0] = batch;
-            } else if (expect[0] > 0) {
-                if (type == Segment.Type.TRANSACTION_STATE) {
-                    parseTransactionState(expect[0], line, dumpFileName, lineNumber[0], currentBatch[0]);
-                } else {
-                    parseData(expect[0], line, dumpFileName, lineNumber[0], currentBatch[0]);
-                }
-                expect[0]--;
-            } else {
-                parseControl(expect[0], line, dumpFileName, lineNumber[0], currentBatch[0]);
-                expect[0]++;
             }
-            if (!deepIteration || currentBatch[0].count() == currentBatch[0].messages().size()) {
-                return Stream.of(currentBatch[0]);
-            } else {
-                return Stream.empty();
+
+            private Matcher matchBatch(String line) {
+                Matcher batchLineMatcher = MESSAGE_SET_PATTERN.matcher(line);
+                if (!batchLineMatcher.matches()) {
+                    throw new IllegalStateException("Expected a message batch");
+                }
+                return batchLineMatcher;
+            }
+
+            private Batch parseBatch(List<BaseMessage> messages, String dumpFilename) {
+                int count = parseInt(batchMatcher.group("count"));
+                Batch batch = new Batch(dumpFilename, batchLineNumber,
+                        parseLong(batchMatcher.group("baseOffset")),
+                        parseLong(batchMatcher.group("lastOffset")),
+                        count,
+                        parseInt(batchMatcher.group("baseSequence")),
+                        parseInt(batchMatcher.group("lastSequence")),
+                        parseLong(batchMatcher.group("producerId")),
+                        parseShort(batchMatcher.group("producerEpoch")),
+                        parseInt(batchMatcher.group("partitionLeaderEpoch")),
+                        parseBoolean(batchMatcher.group("isTransactional")),
+                        parseBoolean(batchMatcher.group("isControl")),
+                        parseLong(batchMatcher.group("position")),
+                        parseLong(batchMatcher.group("createTime")),
+                        parseInt(batchMatcher.group("size")),
+                        Byte.parseByte(batchMatcher.group("magic")),
+                        batchMatcher.group("compressCodec"),
+                        Integer.parseUnsignedInt(batchMatcher.group("crc")),
+                        parseBoolean(batchMatcher.group("isValid")),
+                        messages);
+                checkBatch(type, batch);
+                return batch;
+            }
+
+            private BaseMessage parseData(String line,
+                                          String dumpFilename) {
+                Matcher matcher = DATA_RECORD_PATTERN.matcher(line);
+                if (!matcher.matches()) {
+                    throw new IllegalStateException("Expected " + (expect) + " data records in batch, but this doesn't look like a data record");
+                }
+                return new DataMessage(dumpFilename, lineNumber,
+                        parseLong(matcher.group("offset")),
+                        parseLong(matcher.group("createTime")),
+                        parseInt(matcher.group("keySize")),
+                        parseInt(matcher.group("valueSize")),
+                        parseInt(matcher.group("sequence")),
+                        matcher.group("headerKeys"));
+            }
+
+            private BaseMessage parseControl(String line,
+                                             String dumpFilename) {
+                Matcher matcher = CONTROL_RECORD_PATTERN.matcher(line);
+                if (!matcher.matches()) {
+                    throw new IllegalStateException("Expected " + (-expect) + " control records in batch, but this doesn't look like a control record");
+                }
+                return new ControlMessage(dumpFilename, lineNumber,
+                        parseLong(matcher.group("offset")),
+                        parseLong(matcher.group("createTime")),
+                        parseInt(matcher.group("keySize")),
+                        parseInt(matcher.group("valueSize")),
+                        parseInt(matcher.group("sequence")),
+                        matcher.group("headerKeys"),
+                        matcher.group("endTxnMarker").equals("COMMIT"),
+                        parseInt(matcher.group("coordinatorEpoch")));
+            }
+
+            private BaseMessage parseTransactionState(String line,
+                                                      String dumpFilename) {
+                Matcher matcher = TRANSACTIONAL_RECORD_PATTERN.matcher(line);
+                if (!matcher.matches()) {
+                    throw new IllegalStateException("Expected " + (expect) + " txn records in batch, but this doesn't look like a txn record");
+                }
+                String payload = matcher.group("payload");
+                if (payload.equals("<DELETE>")) {
+                    return new TransactionStateDeletion(dumpFilename, lineNumber,
+                            parseLong(matcher.group("offset")),
+                            parseLong(matcher.group("createTime")),
+                            parseInt(matcher.group("keySize")),
+                            parseInt(matcher.group("valueSize")),
+                            parseInt(matcher.group("sequence")),
+                            matcher.group("headerKeys"),
+                            matcher.group("transactionalId"));
+                } else {
+                    Matcher payloadMatcher = TRANSACTIONAL_PAYLOAD_PATTERN.matcher(payload);
+                    if (!payloadMatcher.matches()) {
+                        throw new UnexpectedFileContent("Didn't match expected pattern");
+                    }
+                    return new TransactionStateChange(dumpFilename, lineNumber,
+                            parseLong(matcher.group("offset")),
+                            parseLong(matcher.group("createTime")),
+                            parseInt(matcher.group("keySize")),
+                            parseInt(matcher.group("valueSize")),
+                            parseInt(matcher.group("sequence")),
+                            matcher.group("headerKeys"),
+                            matcher.group("transactionalId"),
+                            parseLong(payloadMatcher.group("producerId")),
+                            parseShort(payloadMatcher.group("producerEpoch")),
+                            TransactionStateChange.State.valueOf(payloadMatcher.group("state")),
+                            payloadMatcher.group("partitions"),
+                            parseLong(payloadMatcher.group("txnLastUpdateTimestamp")),
+                            parseLong(payloadMatcher.group("txnTimeoutMs")));
+                }
             }
         });
         batchStream = batchStream.map(new AssertBatchesValid())
@@ -275,118 +391,6 @@ public class SegmentDumpReader {
         return startingOffset;
     }
 
-
-    private Batch parseBatch(Segment.Type type,
-                             String line,
-                             String filename,
-                             int lineNumber) {
-        Batch currentBatch;
-        Matcher matcher = MESSAGE_SET_PATTERN.matcher(line);
-        if (!matcher.matches()) {
-            throw new IllegalStateException("Expected a message batch");
-        }
-        int count = parseInt(matcher.group("count"));
-        currentBatch = new Batch(filename, lineNumber,
-                parseLong(matcher.group("baseOffset")),
-                parseLong(matcher.group("lastOffset")),
-                count,
-                parseInt(matcher.group("baseSequence")),
-                parseInt(matcher.group("lastSequence")),
-                parseLong(matcher.group("producerId")),
-                parseShort(matcher.group("producerEpoch")),
-                parseInt(matcher.group("partitionLeaderEpoch")),
-                parseBoolean(matcher.group("isTransactional")),
-                parseBoolean(matcher.group("isControl")),
-                parseLong(matcher.group("position")),
-                parseLong(matcher.group("createTime")),
-                parseInt(matcher.group("size")),
-                Byte.parseByte(matcher.group("magic")),
-                matcher.group("compressCodec"),
-                Integer.parseUnsignedInt(matcher.group("crc")),
-                parseBoolean(matcher.group("isValid")),
-                new ArrayList<>(count));
-        checkBatch(type, currentBatch);
-        return currentBatch;
-    }
-
-    private void parseData(int expect,
-                                  String line,
-                                  String filename,
-                                  int lineNumber,
-                                  Batch batch) {
-        Matcher matcher = DATA_RECORD_PATTERN.matcher(line);
-        if (!matcher.matches()) {
-            throw new IllegalStateException("Expected " + (expect) + " data records in batch, but this doesn't look like a data record");
-        }
-        batch.messages().add(new DataMessage(filename, lineNumber,
-                parseLong(matcher.group("offset")),
-                parseLong(matcher.group("createTime")),
-                parseInt(matcher.group("keySize")),
-                parseInt(matcher.group("valueSize")),
-                parseInt(matcher.group("sequence")),
-                matcher.group("headerKeys")));
-    }
-
-    private void parseControl(int expect,
-                              String line,
-                              String filename,
-                              int lineNumber,
-                              Batch batch) {
-        Matcher matcher = CONTROL_RECORD_PATTERN.matcher(line);
-        if (!matcher.matches()) {
-            throw new IllegalStateException("Expected " + (-expect) + " control records in batch, but this doesn't look like a control record");
-        }
-        batch.messages().add(new ControlMessage(filename, lineNumber,
-                parseLong(matcher.group("offset")),
-                parseLong(matcher.group("createTime")),
-                parseInt(matcher.group("keySize")),
-                parseInt(matcher.group("valueSize")),
-                parseInt(matcher.group("sequence")),
-                matcher.group("headerKeys"),
-                matcher.group("endTxnMarker").equals("COMMIT"),
-                parseInt(matcher.group("coordinatorEpoch"))));
-    }
-
-    private void parseTransactionState(int expect,
-                                      String line,
-                                      String filename,
-                                      int lineNumber,
-                                      Batch batch) {
-        Matcher matcher = TRANSACTIONAL_RECORD_PATTERN.matcher(line);
-        if (!matcher.matches()) {
-            throw new IllegalStateException("Expected " + (expect) + " txn records in batch, but this doesn't look like a txn record");
-        }
-        String payload = matcher.group("payload");
-        if (payload.equals("<DELETE>")) {
-            batch.messages().add(new TransactionStateDeletion(filename, lineNumber,
-                        parseLong(matcher.group("offset")),
-                        parseLong(matcher.group("createTime")),
-                        parseInt(matcher.group("keySize")),
-                        parseInt(matcher.group("valueSize")),
-                        parseInt(matcher.group("sequence")),
-                        matcher.group("headerKeys"),
-                        matcher.group("transactionalId")));
-        } else {
-            Matcher payloadMatcher = TRANSACTIONAL_PAYLOAD_PATTERN.matcher(payload);
-            if (!payloadMatcher.matches()) {
-                throw new UnexpectedFileContent("Didn't match expected pattern");
-            }
-            batch.messages().add(new TransactionStateChange(filename, lineNumber,
-                        parseLong(matcher.group("offset")),
-                        parseLong(matcher.group("createTime")),
-                        parseInt(matcher.group("keySize")),
-                        parseInt(matcher.group("valueSize")),
-                        parseInt(matcher.group("sequence")),
-                        matcher.group("headerKeys"),
-                        matcher.group("transactionalId"),
-                        parseLong(payloadMatcher.group("producerId")),
-                        parseShort(payloadMatcher.group("producerEpoch")),
-                        TransactionStateChange.State.valueOf(payloadMatcher.group("state")),
-                        payloadMatcher.group("partitions"),
-                        parseLong(payloadMatcher.group("txnLastUpdateTimestamp")),
-                        parseLong(payloadMatcher.group("txnTimeoutMs"))));
-        }
-    }
 
 
     public static void main(String[] args) {
