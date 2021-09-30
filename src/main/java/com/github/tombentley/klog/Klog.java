@@ -16,7 +16,6 @@
  */
 package com.github.tombentley.klog;
 
-import com.github.tombentley.klog.segment.cli.SegmentDump;
 import io.quarkus.picocli.runtime.annotations.TopCommand;
 import picocli.CommandLine.Command;
 

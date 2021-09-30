@@ -22,6 +22,8 @@ import com.github.tombentley.klog.segment.model.Batch;
 
 public class Segment {
 
+    ;
+
     public static enum Type {
         DATA(null),
         TRANSACTION_STATE("__transaction_state"),
@@ -34,12 +36,14 @@ public class Segment {
 
     private final String dumpFileName;
     private final Type type;
+    private final String topicName;
     private final boolean deepIteration;
     private final Stream<Batch> batches;
 
-    public Segment(String dumpFileName, Type type, boolean deepIteration, Stream<Batch> batches) {
+    public Segment(String dumpFileName, Type type, String topicName, boolean deepIteration, Stream<Batch> batches) {
         this.dumpFileName = dumpFileName;
         this.type = type;
+        this.topicName = topicName;
         this.deepIteration = deepIteration;
         this.batches = batches;
     }
@@ -53,6 +57,10 @@ public class Segment {
 
     public Type type() {
         return type;
+    }
+
+    public String topicName() {
+        return topicName;
     }
 
     /**

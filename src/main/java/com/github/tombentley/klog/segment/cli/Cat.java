@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import com.github.tombentley.klog.segment.model.Batch;
 import com.github.tombentley.klog.segment.model.ControlMessage;
 import com.github.tombentley.klog.segment.model.DataMessage;
+import com.github.tombentley.klog.segment.model.Located;
 import com.github.tombentley.klog.segment.model.TransactionStateChange;
 import com.github.tombentley.klog.segment.model.TransactionStateDeletion;
 import com.github.tombentley.klog.segment.model.Visitor;
@@ -42,6 +43,11 @@ import picocli.CommandLine.Parameters;
                       "the timestamps into something human readable."
 )
 public class Cat implements Runnable {
+    @Option(names = {"--line-numbers", "-l"},
+            description = "Include line numbers in the output",
+            defaultValue = "false")
+    Boolean lineNumbers;
+
     @Option(names = {"--pid"},
             description = "Select only records with the given producer id.")
     Integer pid;
@@ -64,8 +70,7 @@ public class Cat implements Runnable {
 
     @Override
     public void run() {
-        Visitor visitor = new OutputVisitor();
-
+        Visitor visitor = new OutputVisitor(dumpFiles.size() > 1, lineNumbers);
         SegmentDumpReader segmentDumpReader = new SegmentDumpReader();
         // Sort to get into offset order
         dumpFiles.stream().sorted(Comparator.comparing(File::getName)).forEach(dumpFile -> {
@@ -85,86 +90,74 @@ public class Cat implements Runnable {
     }
 
     private static class OutputVisitor implements Visitor {
+        private final boolean lineNumbers;
+        private final boolean fileName;
+
+        public OutputVisitor(boolean fileName, boolean lineNumbers) {
+            this.fileName = fileName;
+            this.lineNumbers = lineNumbers;
+        }
+
         @Override
         public void batch(Batch batch) {
+            location(batch);
             System.out.println(CommandLine.Help.Ansi.AUTO.string(
-                    "@|bold Batch(" +
-                    "baseOffset=" + batch.baseOffset() +
-                    ", lastOffset=" + batch.lastOffset() +
-                    ", count=" + batch.count() +
-                    ", baseSequence=" + batch.baseSequence() +
-                    ", lastSequence=" + batch.lastSequence() +
-                    ", producerId=" + batch.producerId() +
-                    ", producerEpoch=" + batch.producerEpoch() +
-                    ", partitionLeaderEpoch=" + batch.partitionLeaderEpoch() +
-                    ", isTransactional=" + batch.isTransactional() +
-                    ", isControl=" + batch.isControl() +
-                    ", position=" + batch.position() +
-                    ", createTime=" + Instant.ofEpochMilli(batch.createTime()) +
-                    ", size=" + batch.size() +
-                    ", magic=" + batch.magic() +
-                    ", compressCodec='" + batch.compressCodec() + '\'' +
-                    ", crc=" + batch.crc() +
-                    ", isValid=|@" + (batch.isValid() ? "@|green,bold false|@" : "@|red,bold false|@") + "@|bold " +
-                    ")|@"));
+                    String.format("@|bold Batch(baseOffset=%d, lastOffset=%d, count=%d, baseSequence=%d, " +
+                                  "lastSequence=%d, producerId=%d, producerEpoch=%s, partitionLeaderEpoch=%d, " +
+                                  "isTransactional=%s, isControl=%s, position=%d, createTime=%s, size=%d, " +
+                                  "magic=%s, compressCodec='%s', crc=%d, isValid=|@%s@|bold )|@",
+                            batch.baseOffset(), batch.lastOffset(), batch.count(), batch.baseSequence(),
+                            batch.lastSequence(), batch.producerId(), batch.producerEpoch(), batch.partitionLeaderEpoch(),
+                            batch.isTransactional(), batch.isControl(), batch.position(), Instant.ofEpochMilli(batch.createTime()), batch.size(),
+                            batch.magic(), batch.compressCodec(), batch.crc(), batch.isValid() ? "@|green,bold false|@" : "@|red,bold false|@")));
+        }
+
+        private void location(Located batch) {
+            if (fileName) {
+                System.out.printf("%s:", batch.filename());
+            }
+            if (lineNumbers) {
+                System.out.printf("%d", batch.line());
+            }
         }
 
         @Override
         public void controlMessage(ControlMessage msg) {
-            System.out.println(CommandLine.Help.Ansi.AUTO.string("  ControlMessage(" +
-                               "offset=" + msg.offset() +
-                               ", createTime=" + Instant.ofEpochMilli(msg.createTime()) +
-                               ", keySize=" + msg.keySize() +
-                               ", valueSize=" + msg.valueSize() +
-                               ", sequence=" + msg.sequence() +
-                               ", headers='" + msg.headerKeys() + '\'' +
-                               ", commit=" + (msg.commit() ? "@|green,bold commit|@" : "@|red,bold abort|@") +
-                               ", coordinatorEpoch=" + msg.coordinatorEpoch() +
-                               ')'));
+            location(msg);
+            System.out.println(CommandLine.Help.Ansi.AUTO.string(
+                    String.format("  ControlMessage(offset=%d, createTime=%s, keySize=%d, valueSize=%d, sequence=%d, " +
+                                  "headers='%s', commit=%s, coordinatorEpoch=%d)",
+                            msg.offset(), Instant.ofEpochMilli(msg.createTime()), msg.keySize(), msg.valueSize(), msg.sequence(),
+                            msg.headerKeys(), msg.commit() ? "@|green,bold commit|@" : "@|red,bold abort|@", msg.coordinatorEpoch())));
         }
 
         @Override
         public void stateChangeDeletion(TransactionStateDeletion msg) {
-            System.out.println(CommandLine.Help.Ansi.AUTO.string("  TransactionStateDeletion(" +
-                               "offset=" + msg.offset() +
-                               ", createTime=" + Instant.ofEpochMilli(msg.createTime()) +
-                               ", keySize=" + msg.keySize() +
-                               ", valueSize=" + msg.valueSize() +
-                               ", sequence=" + msg.sequence() +
-                               ", headerKeys='" + msg.headerKeys() + '\'' +
-                               ", transactionId='" + msg.transactionId() + '\'' +
-                               ')'));
+            location(msg);
+            System.out.println(CommandLine.Help.Ansi.AUTO.string(
+                    String.format("  TransactionStateDeletion(offset=%d, createTime=%s, keySize=%d, valueSize=%d, " +
+                                  "sequence=%d, headerKeys='%s', transactionId='%s')",
+                            msg.offset(), Instant.ofEpochMilli(msg.createTime()), msg.keySize(), msg.valueSize(),
+                            msg.sequence(), msg.headerKeys(), msg.transactionId())));
         }
 
         @Override
         public void stateChange(TransactionStateChange msg) {
-            System.out.println(CommandLine.Help.Ansi.AUTO.string("  TransactionStateMessage(" +
-                               "offset=" + msg.offset() +
-                               ", createTime=" + Instant.ofEpochMilli(msg.createTime()) +
-                               ", keySize=" + msg.keySize() +
-                               ", valueSize=" + msg.valueSize() +
-                               ", sequence=" + msg.sequence() +
-                               ", headerKeys='" + msg.headerKeys() + '\'' +
-                               ", transactionId='" + msg.transactionId() + '\'' +
-                               ", producerId=" + msg.producerId() +
-                               ", producerEpoch=" + msg.producerEpoch() +
-                               ", state=@|blue " + msg.state() + "|@" +
-                               ", partitions='" + msg.partitions() + '\'' +
-                               ", txnLastUpdateTimestamp=" + Instant.ofEpochMilli(msg.txnLastUpdateTimestamp()) +
-                               ", txnTimeoutMs=" + msg.txnTimeoutMs() +
-                               ')'));
+            location(msg);
+            System.out.println(CommandLine.Help.Ansi.AUTO.string(
+                    String.format("  TransactionStateMessage(offset=%d, createTime=%s, keySize=%d, valueSize=%d, " +
+                                  "sequence=%d, headerKeys='%s', transactionId='%s', producerId=%d, producerEpoch=%s, " +
+                                  "state=@|blue %s|@, partitions='%s', txnLastUpdateTimestamp=%s, txnTimeoutMs=%d)",
+                            msg.offset(), Instant.ofEpochMilli(msg.createTime()), msg.keySize(), msg.valueSize(),
+                            msg.sequence(), msg.headerKeys(), msg.transactionId(), msg.producerId(), msg.producerEpoch(),
+                            msg.state(), msg.partitions(), Instant.ofEpochMilli(msg.txnLastUpdateTimestamp()), msg.txnTimeoutMs())));
         }
 
         @Override
         public void dataMessage(DataMessage msg) {
-            System.out.println("  DataMessage(" +
-                               "offset=" + msg.offset() +
-                               ", createTime=" + Instant.ofEpochMilli(msg.createTime()) +
-                               ", keySize=" + msg.keySize() +
-                               ", valueSize=" + msg.valueSize() +
-                               ", sequence=" + msg.sequence() +
-                               ", headerKeys='" + msg.headerKeys() + '\'' +
-                               ')');
+            location(msg);
+            System.out.printf("  DataMessage(offset=%d, createTime=%s, keySize=%d, valueSize=%d, sequence=%d, headerKeys='%s')%n",
+                    msg.offset(), Instant.ofEpochMilli(msg.createTime()), msg.keySize(), msg.valueSize(), msg.sequence(), msg.headerKeys());
         }
     }
 }

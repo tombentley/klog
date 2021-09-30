@@ -152,15 +152,17 @@ public class SegmentDumpReader {
                 maybeFirstMessageLine[0] = null;
             }
             deepIteration = maybeFirstMessageLine[0] != null && maybeFirstMessageLine[0].startsWith("| ");
+            lineNumber[0] -= 2;
             batches = batches(dumpFileName, lineNumber, type, deepIteration,
                     Stream.concat(builder.build(), StreamSupport.stream(spliterator, false)));
         }
-        return new Segment(dumpFileName, type, deepIteration, batches);
+        return new Segment(dumpFileName, type, topicName(segmentFile[0]), deepIteration, batches);
     }
 
     private Stream<Batch> batches(String dumpFileName, int[] lineNumber, Segment.Type type, boolean deepIteration, Stream<String> concat) {
         int[] expect = {0};
         Batch[] currentBatch = {null};
+
         return concat.flatMap(line -> {
             lineNumber[0]++;
             if (expect[0] == 0 || !deepIteration) { // if dumped without --deep-iteration then expect is of no value.
@@ -206,6 +208,14 @@ public class SegmentDumpReader {
                 }
             }
         }
+    }
+
+    private String topicName(File segmentFile) {
+        File parent = segmentFile.getParentFile();
+        if (parent != null && parent.getName().matches("[a-zA-Z0-9_.-]+-[0-9]+")) {
+            return parent.getName().substring(parent.getName().lastIndexOf("-"));
+        }
+        return null;
     }
 
     private Segment.Type segmentType(String dumpFilename, File segmentFile) {

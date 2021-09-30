@@ -17,11 +17,19 @@
 package com.github.tombentley.klog.segment.cli;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.github.tombentley.klog.segment.model.Batch;
+import com.github.tombentley.klog.segment.model.ProducerSession;
+import com.github.tombentley.klog.segment.reader.EmptyTransaction;
+import com.github.tombentley.klog.segment.reader.FirstBatchInTxn;
 import com.github.tombentley.klog.segment.reader.Segment;
 import com.github.tombentley.klog.segment.reader.SegmentDumpReader;
 import com.github.tombentley.klog.segment.reader.SegmentInfoCollector;
@@ -34,6 +42,11 @@ import picocli.CommandLine.Parameters;
         description = "Get statistics about transactions from some segment dumps."
 )
 public class TxnStat implements Runnable {
+    @Option(names = {"--line-numbers", "-l"},
+            description = "Include line numbers in the output",
+            defaultValue = "false")
+    Boolean lineNumbers;
+
     @Option(names = {"--pid"},
             description = "Select only records with the given producer id.")
     Integer pid;
@@ -55,16 +68,21 @@ public class TxnStat implements Runnable {
 
         SegmentDumpReader segmentDumpReader = new SegmentDumpReader();
         // Sort to get into offset order
-        var segmentInfo = dumpFiles.stream().sorted(Comparator.comparing(File::getName))
+        List<Segment> segments = dumpFiles.stream().sorted(Comparator.comparing(File::getName))
                 .map(dumpFile -> {
                     Segment segment = segmentDumpReader.readSegment(dumpFile);
                     if (segment.type() != Segment.Type.DATA) {
                         throw new RuntimeException(segment.type().topicName + " partitions do not contain transactional messages");
                     }
-                    // TODO assert that they're all the same topic
-                    // TODO assert that they're in the right order
+
                     return segment;
-                })
+                }).collect(Collectors.toList());
+        Set<String> topics = segments.stream().map(Segment::topicName).collect(Collectors.toSet());
+        if (topics.size() > 1) {
+            throw new RuntimeException("Segment dumps come from multiple different topics " + topics);
+        }
+        // TODO assert that they're in the right order (they should be because we sorted the files)
+        var segmentInfo = segments.stream()
                 .flatMap(segment -> {
                     Predicate<Batch> predicate = BatchPredicate.predicate(segment.type(), pid, producerEpoch, leaderEpoch, null);
                     var locatedStream = segment.batches();
@@ -75,12 +93,38 @@ public class TxnStat implements Runnable {
                 })
                 .collect(SegmentInfoCollector.collector());
 
-        System.out.println("num_committed: " + segmentInfo.numTransactionalCommit());
-        System.out.println("num_aborted: " + segmentInfo.numTransactionalAbort());
-        System.out.println("txn_size_stats: " + segmentInfo.txnSizeStats());
-        System.out.println("txn_duration_stats_ms: " + segmentInfo.txnDurationStats());
-        segmentInfo.emptyTransactions().forEach(txn -> System.out.println("empty_txn: " + txn));
-        segmentInfo.openTransactions().forEach((sess, txn) -> System.out.println("open_txn: " + sess + "->" + txn));
+        System.out.printf("num_committed: %d%n", segmentInfo.numTransactionalCommit());
+        System.out.printf("num_aborted: %d%n", segmentInfo.numTransactionalAbort());
+        System.out.printf("txn_size_stats: %s%n", segmentInfo.txnSizeStats());
+        System.out.printf("txn_duration_stats_ms: %s%n", segmentInfo.txnDurationStats());
+        for (EmptyTransaction emptyTransaction : segmentInfo.emptyTransactions()) {
+            printEmpty(segments.size() > 1, emptyTransaction);
+        }
+        for (Map.Entry<ProducerSession, FirstBatchInTxn> entry : segmentInfo.openTransactions().entrySet()) {
+            printOpen(segments.size() > 1, entry.getKey(), entry.getValue());
+        }
+    }
+
+    private void printEmpty(boolean filenames, EmptyTransaction txn) {
+        System.out.print("empty_txn:");
+        if (filenames) {
+            System.out.printf("%s:", txn.controlMessage().filename());
+        }
+        if (lineNumbers) {
+            System.out.printf("%d:", txn.controlMessage().line());
+        }
+        System.out.printf(" %s%n", txn);
+    }
+
+    private void printOpen(boolean filenames, ProducerSession sess, FirstBatchInTxn txn) {
+        System.out.print("open_txn:");
+        if (filenames) {
+            System.out.printf("%s:", txn.firstBatchInTxn().filename());
+        }
+        if (lineNumbers) {
+            System.out.printf("%d:", txn.firstBatchInTxn().line());
+        }
+        System.out.printf(" %s->%s%n", sess, txn);
     }
 
 }
