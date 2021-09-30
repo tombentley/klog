@@ -109,7 +109,7 @@ public class Cat implements Runnable {
                             batch.baseOffset(), batch.lastOffset(), batch.count(), batch.baseSequence(),
                             batch.lastSequence(), batch.producerId(), batch.producerEpoch(), batch.partitionLeaderEpoch(),
                             batch.isTransactional(), batch.isControl(), batch.position(), Instant.ofEpochMilli(batch.createTime()), batch.size(),
-                            batch.magic(), batch.compressCodec(), batch.crc(), batch.isValid() ? "@|green,bold false|@" : "@|red,bold false|@")));
+                            batch.magic(), batch.compressCodec(), batch.crc(), batch.isValid())));
         }
 
         private void location(Located batch) {
@@ -117,7 +117,7 @@ public class Cat implements Runnable {
                 System.out.printf("%s:", batch.filename());
             }
             if (lineNumbers) {
-                System.out.printf("%d", batch.line());
+                System.out.printf("%d: ", batch.line());
             }
         }
 
