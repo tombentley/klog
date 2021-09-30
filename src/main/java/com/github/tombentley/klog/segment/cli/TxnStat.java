@@ -17,14 +17,12 @@
 package com.github.tombentley.klog.segment.cli;
 
 import java.io.File;
-import java.io.PrintStream;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.github.tombentley.klog.segment.model.Batch;
 import com.github.tombentley.klog.segment.model.ProducerSession;
@@ -32,7 +30,7 @@ import com.github.tombentley.klog.segment.reader.EmptyTransaction;
 import com.github.tombentley.klog.segment.reader.FirstBatchInTxn;
 import com.github.tombentley.klog.segment.reader.Segment;
 import com.github.tombentley.klog.segment.reader.SegmentDumpReader;
-import com.github.tombentley.klog.segment.reader.SegmentInfoCollector;
+import com.github.tombentley.klog.segment.reader.TransactionalInfoCollector;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -91,7 +89,7 @@ public class TxnStat implements Runnable {
                     }
                     return locatedStream;
                 })
-                .collect(SegmentInfoCollector.collector());
+                .collect(TransactionalInfoCollector.collector());
 
         System.out.printf("num_committed: %d%n", segmentInfo.numTransactionalCommit());
         System.out.printf("num_aborted: %d%n", segmentInfo.numTransactionalAbort());

@@ -24,7 +24,7 @@ import java.util.Objects;
 import com.github.tombentley.klog.segment.model.Batch;
 import com.github.tombentley.klog.segment.model.ProducerSession;
 
-public final class SegmentInfo {
+public final class TransactionalInfo {
     private final Map<ProducerSession, FirstBatchInTxn> openTransactions;
     private final Batch firstBatch;
     private final Batch lastBatch;
@@ -34,13 +34,13 @@ public final class SegmentInfo {
     private final IntSummaryStatistics txnSizeStats;
     private final IntSummaryStatistics txnDurationStats;
 
-    public SegmentInfo(Map<ProducerSession, FirstBatchInTxn> openTransactions,
-                       Batch firstBatch,
-                       Batch lastBatch,
-                       List<EmptyTransaction> emptyTransactions,
-                       long numTransactionalCommit, long numTransactionalAbort,
-                       IntSummaryStatistics txnSizeStats,
-                       IntSummaryStatistics txnDurationStats) {
+    public TransactionalInfo(Map<ProducerSession, FirstBatchInTxn> openTransactions,
+                             Batch firstBatch,
+                             Batch lastBatch,
+                             List<EmptyTransaction> emptyTransactions,
+                             long numTransactionalCommit, long numTransactionalAbort,
+                             IntSummaryStatistics txnSizeStats,
+                             IntSummaryStatistics txnDurationStats) {
         this.openTransactions = openTransactions;
         this.firstBatch = firstBatch;
         this.lastBatch = lastBatch;
@@ -87,7 +87,7 @@ public final class SegmentInfo {
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (SegmentInfo) obj;
+        var that = (TransactionalInfo) obj;
         return Objects.equals(this.openTransactions, that.openTransactions) &&
                Objects.equals(this.firstBatch, that.firstBatch) &&
                Objects.equals(this.lastBatch, that.lastBatch) &&

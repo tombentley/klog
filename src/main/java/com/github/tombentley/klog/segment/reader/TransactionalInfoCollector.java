@@ -32,7 +32,7 @@ import com.github.tombentley.klog.segment.model.ProducerSession;
 import com.github.tombentley.klog.segment.model.TransactionStateChange;
 import com.github.tombentley.klog.segment.model.TransactionStateDeletion;
 
-public class SegmentInfoCollector {
+public class TransactionalInfoCollector {
 
     private Batch currentBatch;
     private final Map<ProducerSession, FirstBatchInTxn> openTransactions = new HashMap<>();
@@ -42,16 +42,15 @@ public class SegmentInfoCollector {
     private final IntSummaryStatistics txnDurationStats = new IntSummaryStatistics();
     private long numTransactionalCommit = 0;
     private long numTransactionalAbort = 0;
-    private final Map<ProducerSession, TransactionStateChange.State> transactions = new HashMap<>();
 
-    public SegmentInfoCollector() {
+    public TransactionalInfoCollector() {
     }
 
-    public static Collector<Batch, SegmentInfoCollector, SegmentInfo> collector() {
-        return Collector.of(SegmentInfoCollector::new,
-                SegmentInfoCollector::accumulator,
-                SegmentInfoCollector::combiner,
-                SegmentInfoCollector::finisher);
+    public static Collector<Batch, TransactionalInfoCollector, TransactionalInfo> collector() {
+        return Collector.of(TransactionalInfoCollector::new,
+                TransactionalInfoCollector::accumulator,
+                TransactionalInfoCollector::combiner,
+                TransactionalInfoCollector::finisher);
     }
 
     public void accumulator(Batch batch) {
@@ -95,28 +94,20 @@ public class SegmentInfoCollector {
                     txnDurationStats.accept((int) (currentBatch.createTime() - firstBatchInTxn.firstBatchInTxn().createTime()));
                 }
             } else if (message instanceof TransactionStateChange) {
-                var stateChange = (TransactionStateChange) message;
-                validateStateTransition(message, stateChange);
+
             } else if (message instanceof TransactionStateDeletion) {
 
             }
         }
     }
 
-    private void validateStateTransition(BaseMessage message, TransactionStateChange stateChange) {
-        TransactionStateChange.State state = transactions.get(stateChange.session());
-        if (state != null && !stateChange.state().validPrevious(state)) {
-            throw new RuntimeException(message.filename() + ": " + message.line() + ": Illegal state change from " + state + " to " + stateChange.state());
-        }
-        transactions.put(stateChange.session(), stateChange.state());
-    }
 
-    public SegmentInfoCollector combiner(SegmentInfoCollector b) {
+    public TransactionalInfoCollector combiner(TransactionalInfoCollector b) {
         return null;// TODO
     }
 
-    public SegmentInfo finisher() {
-        return new SegmentInfo(openTransactions, firstBatch, currentBatch, emptyTransactions,
+    public TransactionalInfo finisher() {
+        return new TransactionalInfo(openTransactions, firstBatch, currentBatch, emptyTransactions,
                 numTransactionalCommit, numTransactionalAbort,
                 txnSizeStats, txnDurationStats);
     }

@@ -16,6 +16,10 @@
  */
 package com.github.tombentley.klog.segment.reader;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import com.github.tombentley.klog.segment.model.Batch;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -33,21 +37,41 @@ class SegmentDumpReaderTest {
                       "baseOffset: 0 lastOffset: 1 count: 2 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 0 CreateTime: 1632815304456 size: 88 magic: 2 compresscodec: none crc: 873053997 isvalid: true\n" +
                       "baseOffset: 2 lastOffset: 2 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 88 CreateTime: 1632815305550 size: 75 magic: 2 compresscodec: none crc: 945198711 isvalid: true\n" +
                       "baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true";
-        SegmentInfo segmentInfo = new SegmentDumpReader()
+        Segment segment = new SegmentDumpReader()
+                .readSegment("<test-input>", content.lines());
+        assertFalse(segment.deepIteration());
+        assertEquals(null, segment.topicName());
+        assertEquals("<test-input>", segment.dumpFileName());
+        assertEquals(Segment.Type.DATA, segment.type());
+        TransactionalInfo transactionalInfo = segment
+                .batches().collect(TransactionalInfoCollector.collector());
+        Assertions.assertEquals(0, transactionalInfo.firstBatch().baseOffset());
+        Assertions.assertEquals(1, transactionalInfo.firstBatch().lastOffset());
+        assertFalse(transactionalInfo.firstBatch().isTransactional());
+        Assertions.assertEquals(3, transactionalInfo.lastBatch().baseOffset());
+        Assertions.assertEquals(3, transactionalInfo.lastBatch().lastOffset());
+        assertFalse(transactionalInfo.lastBatch().isTransactional());
+        assertEquals(0, transactionalInfo.numTransactionalAbort());
+        assertEquals(0, transactionalInfo.numTransactionalCommit());
+        assertTrue(transactionalInfo.emptyTransactions().isEmpty());
+        assertTrue(transactionalInfo.openTransactions().isEmpty());
+        assertEquals(0, transactionalInfo.txnSizeStats().getCount());
+        assertEquals(0, transactionalInfo.txnDurationStats().getCount());
+    }
+
+    @Test
+    public void testWithoutDeepIterationLineNumbers() {
+        var content = "Dumping ./00000000000000000000.log\n" +
+                      "Starting offset: 0\n" +
+                      "baseOffset: 0 lastOffset: 1 count: 2 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 0 CreateTime: 1632815304456 size: 88 magic: 2 compresscodec: none crc: 873053997 isvalid: true\n" +
+                      "baseOffset: 2 lastOffset: 2 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 88 CreateTime: 1632815305550 size: 75 magic: 2 compresscodec: none crc: 945198711 isvalid: true\n" +
+                      "baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true";
+        List<Batch> batches = new SegmentDumpReader()
                 .readSegment("<test-input>", content.lines())
-                .batches().collect(SegmentInfoCollector.collector());
-        Assertions.assertEquals(0, segmentInfo.firstBatch().baseOffset());
-        Assertions.assertEquals(1, segmentInfo.firstBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.firstBatch().isTransactional());
-        Assertions.assertEquals(3, segmentInfo.lastBatch().baseOffset());
-        Assertions.assertEquals(3, segmentInfo.lastBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.lastBatch().isTransactional());
-        assertEquals(0, segmentInfo.numTransactionalAbort());
-        assertEquals(0, segmentInfo.numTransactionalCommit());
-        assertTrue(segmentInfo.emptyTransactions().isEmpty());
-        assertTrue(segmentInfo.openTransactions().isEmpty());
-        assertEquals(0, segmentInfo.txnSizeStats().getCount());
-        assertEquals(0, segmentInfo.txnDurationStats().getCount());
+                .batches().collect(Collectors.toList());
+        assertEquals(3, batches.get(0).line());
+        assertEquals(4, batches.get(1).line());
+        assertEquals(5, batches.get(2).line());
     }
 
     /** --deep-iteration */
@@ -62,21 +86,49 @@ class SegmentDumpReaderTest {
                       "| offset: 2 CreateTime: 1632815305550 keySize: -1 valueSize: 7 sequence: -1 headerKeys: []\n" +
                       "baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true\n" +
                       "| offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: []\n";
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+        TransactionalInfo transactionalInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
                 .batches()
-                .collect(SegmentInfoCollector.collector());
-        Assertions.assertEquals(0, segmentInfo.firstBatch().baseOffset());
-        Assertions.assertEquals(1, segmentInfo.firstBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.firstBatch().isTransactional());
-        Assertions.assertEquals(3, segmentInfo.lastBatch().baseOffset());
-        Assertions.assertEquals(3, segmentInfo.lastBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.lastBatch().isTransactional());
-        assertEquals(0, segmentInfo.numTransactionalAbort());
-        assertEquals(0, segmentInfo.numTransactionalCommit());
-        assertTrue(segmentInfo.emptyTransactions().isEmpty());
-        assertTrue(segmentInfo.openTransactions().isEmpty());
-        assertEquals(0, segmentInfo.txnSizeStats().getCount());
-        assertEquals(0, segmentInfo.txnDurationStats().getCount());
+                .collect(TransactionalInfoCollector.collector());
+        Assertions.assertEquals(0, transactionalInfo.firstBatch().baseOffset());
+        Assertions.assertEquals(1, transactionalInfo.firstBatch().lastOffset());
+        assertFalse(transactionalInfo.firstBatch().isTransactional());
+        Assertions.assertEquals(3, transactionalInfo.lastBatch().baseOffset());
+        Assertions.assertEquals(3, transactionalInfo.lastBatch().lastOffset());
+        assertFalse(transactionalInfo.lastBatch().isTransactional());
+        assertEquals(0, transactionalInfo.numTransactionalAbort());
+        assertEquals(0, transactionalInfo.numTransactionalCommit());
+        assertTrue(transactionalInfo.emptyTransactions().isEmpty());
+        assertTrue(transactionalInfo.openTransactions().isEmpty());
+        assertEquals(0, transactionalInfo.txnSizeStats().getCount());
+        assertEquals(0, transactionalInfo.txnDurationStats().getCount());
+    }
+
+    /** --deep-iteration */
+    @Test
+    public void testWithDeepIterationLineNumbers() {
+        var content = "Dumping /tmp/kafka-logs/foo-0/00000000000000000000.log\n" +
+                      "Starting offset: 0\n" +
+                      "baseOffset: 0 lastOffset: 1 count: 2 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 0 CreateTime: 1632815304456 size: 88 magic: 2 compresscodec: none crc: 873053997 isvalid: true\n" +
+                      "| offset: 0 CreateTime: 1632815303637 keySize: -1 valueSize: 7 sequence: -1 headerKeys: []\n" +
+                      "| offset: 1 CreateTime: 1632815304456 keySize: -1 valueSize: 5 sequence: -1 headerKeys: []\n" +
+                      "baseOffset: 2 lastOffset: 2 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 88 CreateTime: 1632815305550 size: 75 magic: 2 compresscodec: none crc: 945198711 isvalid: true\n" +
+                      "| offset: 2 CreateTime: 1632815305550 keySize: -1 valueSize: 7 sequence: -1 headerKeys: []\n" +
+                      "baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true\n" +
+                      "| offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: []\n";
+        List<Batch> batches = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+                .batches().collect(Collectors.toList());
+        assertEquals(2, batches.get(0).messages().size());
+        assertEquals(1, batches.get(1).messages().size());
+        assertEquals(1, batches.get(2).messages().size());
+
+        assertEquals(3, batches.get(0).line());
+        assertEquals(4, batches.get(0).messages().get(0).line());
+        assertEquals(5, batches.get(0).messages().get(1).line());
+        assertEquals(6, batches.get(1).line());
+        assertEquals(7, batches.get(1).messages().get(0).line());
+        assertEquals(8, batches.get(2).line());
+        assertEquals(9, batches.get(2).messages().get(0).line());
+
     }
 
     /** --deep-iteration --print-data-log */
@@ -91,21 +143,21 @@ class SegmentDumpReaderTest {
                       "| offset: 2 CreateTime: 1632815305550 keySize: -1 valueSize: 7 sequence: -1 headerKeys: [] payload: trnnrtn\n" +
                       "baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true\n" +
                       "| offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: [] payload: 65u5k6uk,yj\n";
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+        TransactionalInfo transactionalInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
                 .batches()
-                .collect(SegmentInfoCollector.collector());
-        Assertions.assertEquals(0, segmentInfo.firstBatch().baseOffset());
-        Assertions.assertEquals(1, segmentInfo.firstBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.firstBatch().isTransactional());
-        Assertions.assertEquals(3, segmentInfo.lastBatch().baseOffset());
-        Assertions.assertEquals(3, segmentInfo.lastBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.lastBatch().isTransactional());
-        assertEquals(0, segmentInfo.numTransactionalAbort());
-        assertEquals(0, segmentInfo.numTransactionalCommit());
-        assertTrue(segmentInfo.emptyTransactions().isEmpty());
-        assertTrue(segmentInfo.openTransactions().isEmpty());
-        assertEquals(0, segmentInfo.txnSizeStats().getCount());
-        assertEquals(0, segmentInfo.txnDurationStats().getCount());
+                .collect(TransactionalInfoCollector.collector());
+        Assertions.assertEquals(0, transactionalInfo.firstBatch().baseOffset());
+        Assertions.assertEquals(1, transactionalInfo.firstBatch().lastOffset());
+        assertFalse(transactionalInfo.firstBatch().isTransactional());
+        Assertions.assertEquals(3, transactionalInfo.lastBatch().baseOffset());
+        Assertions.assertEquals(3, transactionalInfo.lastBatch().lastOffset());
+        assertFalse(transactionalInfo.lastBatch().isTransactional());
+        assertEquals(0, transactionalInfo.numTransactionalAbort());
+        assertEquals(0, transactionalInfo.numTransactionalCommit());
+        assertTrue(transactionalInfo.emptyTransactions().isEmpty());
+        assertTrue(transactionalInfo.openTransactions().isEmpty());
+        assertEquals(0, transactionalInfo.txnSizeStats().getCount());
+        assertEquals(0, transactionalInfo.txnDurationStats().getCount());
     }
 
     /** --deep-iteration */
@@ -126,23 +178,23 @@ class SegmentDumpReaderTest {
                       "| offset: 5 CreateTime: 1632840912091 keySize: -1 valueSize: 10 sequence: 4 headerKeys: []\n" +
                       "baseOffset: 6 lastOffset: 6 count: 1 baseSequence: -1 lastSequence: -1 producerId: 0 producerEpoch: 0 partitionLeaderEpoch: 0 isTransactional: true isControl: true position: 407 CreateTime: 1632840912595 size: 78 magic: 2 compresscodec: none crc: 1079808135 isvalid: true\n" +
                       "| offset: 6 CreateTime: 1632840912595 keySize: 4 valueSize: 6 sequence: -1 headerKeys: [] endTxnMarker: COMMIT coordinatorEpoch: 4\n";
-        SegmentInfo segmentInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+        TransactionalInfo transactionalInfo = new SegmentDumpReader().readSegment("<test-input>", content.lines())
                 .batches()
-                .collect(SegmentInfoCollector.collector());
-        Assertions.assertEquals(0, segmentInfo.firstBatch().baseOffset());
-        Assertions.assertEquals(1, segmentInfo.firstBatch().lastOffset());
-        Assertions.assertTrue(segmentInfo.firstBatch().isTransactional());
-        Assertions.assertFalse(segmentInfo.firstBatch().isControl());
-        Assertions.assertEquals(6, segmentInfo.lastBatch().baseOffset());
-        Assertions.assertEquals(6, segmentInfo.lastBatch().lastOffset());
-        Assertions.assertTrue(segmentInfo.lastBatch().isTransactional());
-        Assertions.assertTrue(segmentInfo.lastBatch().isControl());
-        assertEquals(0, segmentInfo.numTransactionalAbort());
-        assertEquals(2, segmentInfo.numTransactionalCommit());
-        assertTrue(segmentInfo.emptyTransactions().isEmpty());
-        assertTrue(segmentInfo.openTransactions().isEmpty());
-        assertEquals(2, segmentInfo.txnSizeStats().getCount());
-        assertEquals(2, segmentInfo.txnDurationStats().getCount());
+                .collect(TransactionalInfoCollector.collector());
+        Assertions.assertEquals(0, transactionalInfo.firstBatch().baseOffset());
+        Assertions.assertEquals(1, transactionalInfo.firstBatch().lastOffset());
+        Assertions.assertTrue(transactionalInfo.firstBatch().isTransactional());
+        assertFalse(transactionalInfo.firstBatch().isControl());
+        Assertions.assertEquals(6, transactionalInfo.lastBatch().baseOffset());
+        Assertions.assertEquals(6, transactionalInfo.lastBatch().lastOffset());
+        Assertions.assertTrue(transactionalInfo.lastBatch().isTransactional());
+        Assertions.assertTrue(transactionalInfo.lastBatch().isControl());
+        assertEquals(0, transactionalInfo.numTransactionalAbort());
+        assertEquals(2, transactionalInfo.numTransactionalCommit());
+        assertTrue(transactionalInfo.emptyTransactions().isEmpty());
+        assertTrue(transactionalInfo.openTransactions().isEmpty());
+        assertEquals(2, transactionalInfo.txnSizeStats().getCount());
+        assertEquals(2, transactionalInfo.txnDurationStats().getCount());
     }
 
     /** --transaction-log-decoder on a segment from __transaction_state */
@@ -164,22 +216,22 @@ class SegmentDumpReaderTest {
                       "| offset: 5 CreateTime: 1632840912592 keySize: 15 valueSize: 64 sequence: -1 headerKeys: [] key: transaction_metadata::transactionalId=my-txnal-id payload: producerId:0,producerEpoch:0,state=PrepareCommit,partitions=[transactional-foo-0],txnLastUpdateTimestamp=1632840912592,txnTimeoutMs=60000\n" +
                       "baseOffset: 6 lastOffset: 6 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 4 isTransactional: false isControl: false position: 836 CreateTime: 1632840912607 size: 120 magic: 2 compresscodec: none crc: 1098902730 isvalid: true\n" +
                       "| offset: 6 CreateTime: 1632840912607 keySize: 15 valueSize: 37 sequence: -1 headerKeys: [] key: transaction_metadata::transactionalId=my-txnal-id payload: producerId:0,producerEpoch:0,state=CompleteCommit,partitions=[],txnLastUpdateTimestamp=1632840912593,txnTimeoutMs=60000\n";
-        SegmentInfo segmentInfo = new SegmentDumpReader()
+        TransactionalInfo transactionalInfo = new SegmentDumpReader()
                 .readSegment("<test-input>", content.lines())
                 .batches()
-                .collect(SegmentInfoCollector.collector());
-        Assertions.assertEquals(0, segmentInfo.firstBatch().baseOffset());
-        Assertions.assertEquals(0, segmentInfo.firstBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.firstBatch().isTransactional());
-        Assertions.assertEquals(6, segmentInfo.lastBatch().baseOffset());
-        Assertions.assertEquals(6, segmentInfo.lastBatch().lastOffset());
-        Assertions.assertFalse(segmentInfo.lastBatch().isTransactional());
-        assertEquals(0, segmentInfo.numTransactionalAbort());
-        assertEquals(0, segmentInfo.numTransactionalCommit());
-        assertTrue(segmentInfo.emptyTransactions().isEmpty());
-        assertTrue(segmentInfo.openTransactions().isEmpty());
-        assertEquals(0, segmentInfo.txnSizeStats().getCount());
-        assertEquals(0, segmentInfo.txnDurationStats().getCount());
+                .collect(TransactionalInfoCollector.collector());
+        Assertions.assertEquals(0, transactionalInfo.firstBatch().baseOffset());
+        Assertions.assertEquals(0, transactionalInfo.firstBatch().lastOffset());
+        assertFalse(transactionalInfo.firstBatch().isTransactional());
+        Assertions.assertEquals(6, transactionalInfo.lastBatch().baseOffset());
+        Assertions.assertEquals(6, transactionalInfo.lastBatch().lastOffset());
+        assertFalse(transactionalInfo.lastBatch().isTransactional());
+        assertEquals(0, transactionalInfo.numTransactionalAbort());
+        assertEquals(0, transactionalInfo.numTransactionalCommit());
+        assertTrue(transactionalInfo.emptyTransactions().isEmpty());
+        assertTrue(transactionalInfo.openTransactions().isEmpty());
+        assertEquals(0, transactionalInfo.txnSizeStats().getCount());
+        assertEquals(0, transactionalInfo.txnDurationStats().getCount());
     }
 
     // TODO simulate hanging transaction

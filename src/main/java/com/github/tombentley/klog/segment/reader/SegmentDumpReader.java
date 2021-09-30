@@ -163,7 +163,7 @@ public class SegmentDumpReader {
         int[] expect = {0};
         Batch[] currentBatch = {null};
 
-        return concat.flatMap(line -> {
+        Stream<Batch> batchStream = concat.flatMap(line -> {
             lineNumber[0]++;
             if (expect[0] == 0 || !deepIteration) { // if dumped without --deep-iteration then expect is of no value.
                 var batch = parseBatch(type, line, dumpFileName, lineNumber[0]);
@@ -190,6 +190,14 @@ public class SegmentDumpReader {
                 return Stream.empty();
             }
         });
+        batchStream = batchStream.map(new AssertBatchesValid())
+                .map(new AssertBatchPositionMonotonic())
+                .map(new AssertLeaderEpochMonotonic());
+        if (type == Segment.Type.TRANSACTION_STATE) {
+            batchStream = batchStream.map(new AssertTransactionStateMachine())
+                    .map(new AssertBatchesTransactional(false));
+        }
+        return batchStream;
     }
 
     private void checkBatch(Segment.Type type, Batch batch) {
@@ -385,7 +393,7 @@ public class SegmentDumpReader {
         SegmentDumpReader segmentDumpReader = new SegmentDumpReader();
         // Sort to get into offset order
         Arrays.stream(args).map(File::new).map(dumpFile ->
-                segmentDumpReader.readSegment(dumpFile).batches().collect(SegmentInfoCollector.collector())).forEach(x -> {
+                segmentDumpReader.readSegment(dumpFile).batches().collect(TransactionalInfoCollector.collector())).forEach(x -> {
             System.out.println("First batch: " + x.firstBatch());
             x.emptyTransactions().forEach(txn -> System.out.println("Empty txn: " + txn));
             System.out.println("Last batch: " + x.lastBatch());
