@@ -6,10 +6,24 @@ A tool to analyse dumps of Kafka log segments, as produced by `kafka-dump-logs.s
 
 ## Building
 
-You can build a native executable:
+You can build a native executable using GraalVM:
 
 ```shell
 ./mvnw package -Pnative
+```
+
+If you already have Docker installed, then you can build the native image without GraalVM:
+
+```shell
+mvn clean package -Pnative -Dquarkus.native.container-build=true
+```
+
+If you only have Minikube, then you can build it too:
+
+```shell
+minikube start
+eval $(minikube -p minikube docker-env)
+mvn clean package -Pnative -Dquarkus.native.remote-container-build=true
 ```
 
 ## Installing
@@ -85,7 +99,7 @@ Currently, this includes:
 * `txn_size_stats` Some stats about the number of data batches in each transaction
 * `txn_duraction_stats_ms` Some stats about the duration of transactions
 * `empty_txn` (multiple occurrences) Info about each empty transaction in the log. An empty transaction is one where, for a given producer session (identified by a PID and producer epoch), a transaction is ended by a control batch without the previous batch for that session being a data batch. 
-* `open_txn` (multiple occurrences) Info about any open transactions in the log An open transaction is one where there's a data batch for a given producer session that's not followed by a control batch.
+* `open_txn` (multiple occurrences) Info about any open transactions in the log. An open transaction is one where there's a data batch for a given producer session that's not followed by a control batch.
 
 As for `klog segment cat` filtering options are supported: `--pid`, `--producer-epoch`, `leader-epoch`
 
