@@ -37,7 +37,7 @@ public class TransactionalInfoCollector {
     private Batch currentBatch;
     private final Map<ProducerSession, FirstBatchInTxn> openTransactions = new HashMap<>();
     private Batch firstBatch;
-    private final List<EmptyTransaction> emptyTransactions = new ArrayList<>();
+    private final Map<ProducerSession, EmptyTransaction> emptyTransactions = new HashMap<>();
     private final IntSummaryStatistics txnSizeStats = new IntSummaryStatistics();
     private final IntSummaryStatistics txnDurationStats = new IntSummaryStatistics();
     private long numTransactionalCommit = 0;
@@ -88,7 +88,7 @@ public class TransactionalInfoCollector {
                 }
                 var firstBatchInTxn = openTransactions.remove(currentBatch.session());
                 if (firstBatchInTxn == null) {
-                    emptyTransactions.add(new EmptyTransaction(currentBatch, control));
+                    emptyTransactions.put(currentBatch.session(), new EmptyTransaction(currentBatch, control));
                 } else {
                     txnSizeStats.accept(firstBatchInTxn.numDataBatches().get());
                     txnDurationStats.accept((int) (currentBatch.createTime() - firstBatchInTxn.firstBatchInTxn().createTime()));

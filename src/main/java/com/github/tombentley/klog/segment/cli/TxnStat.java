@@ -20,6 +20,7 @@ import java.io.File;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -95,11 +96,12 @@ public class TxnStat implements Runnable {
         System.out.printf("num_aborted: %d%n", segmentInfo.numTransactionalAbort());
         System.out.printf("txn_size_stats: %s%n", segmentInfo.txnSizeStats());
         System.out.printf("txn_duration_stats_ms: %s%n", segmentInfo.txnDurationStats());
-        for (EmptyTransaction emptyTransaction : segmentInfo.emptyTransactions()) {
-            printEmpty(segments.size() > 1, emptyTransaction);
+        for (Map.Entry<ProducerSession, EmptyTransaction> entry : segmentInfo.emptyTransactions().entrySet()) {
+            printEmpty(segments.size() > 1, entry.getValue());
         }
         for (Map.Entry<ProducerSession, FirstBatchInTxn> entry : segmentInfo.openTransactions().entrySet()) {
-            printOpen(segments.size() > 1, entry.getKey(), entry.getValue());
+            EmptyTransaction emptyTransaction = segmentInfo.emptyTransactions().get(entry.getKey());
+            printOpen(segments.size() > 1, entry.getKey(), entry.getValue(), emptyTransaction);
         }
     }
 
@@ -114,7 +116,7 @@ public class TxnStat implements Runnable {
         System.out.printf(" %s%n", txn);
     }
 
-    private void printOpen(boolean filenames, ProducerSession sess, FirstBatchInTxn txn) {
+    private void printOpen(boolean filenames, ProducerSession sess, FirstBatchInTxn txn, EmptyTransaction emptyTransaction) {
         System.out.print("open_txn:");
         if (filenames) {
             System.out.printf("%s:", txn.firstBatchInTxn().filename());
@@ -123,6 +125,14 @@ public class TxnStat implements Runnable {
             System.out.printf("%d:", txn.firstBatchInTxn().line());
         }
         System.out.printf(" %s->%s%n", sess, txn);
+        if (emptyTransaction != null) {
+            System.out.printf("Found a matching out of order control batch: %s\n", emptyTransaction);
+            System.out.print("To forcibly abort this transaction, run: ");
+            System.out.print("bin/kafka-transactions.sh --bootstrap-server <BOOTSTRAP_SERVER> --command-config <CONFIG_FILE> abort ");
+            System.out.print("--topic <TOPIC> --partition <PARTITION> ");
+            System.out.printf("--producer-id %d --producer-epoch %d ", sess.producerId(), sess.producerId());
+            System.out.printf("--coordinator-epoch %d\n", emptyTransaction.controlMessage().coordinatorEpoch());
+        }
     }
 
 }

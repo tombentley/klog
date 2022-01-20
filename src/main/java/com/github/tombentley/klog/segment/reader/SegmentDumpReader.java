@@ -399,7 +399,7 @@ public class SegmentDumpReader {
         Arrays.stream(args).map(File::new).map(dumpFile ->
                 segmentDumpReader.readSegment(dumpFile).batches().collect(TransactionalInfoCollector.collector())).forEach(x -> {
             System.out.println("First batch: " + x.firstBatch());
-            x.emptyTransactions().forEach(txn -> System.out.println("Empty txn: " + txn));
+            x.emptyTransactions().values().forEach(txn -> System.out.println("Empty txn: " + txn));
             System.out.println("Last batch: " + x.lastBatch());
             x.openTransactions().forEach((sess, txn) -> System.out.println("Open transaction: " + sess + "->" + txn));
             System.out.println("#committed: " + x.numTransactionalCommit());

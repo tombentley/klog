@@ -17,7 +17,6 @@
 package com.github.tombentley.klog.segment.reader;
 
 import java.util.IntSummaryStatistics;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -28,7 +27,7 @@ public final class TransactionalInfo {
     private final Map<ProducerSession, FirstBatchInTxn> openTransactions;
     private final Batch firstBatch;
     private final Batch lastBatch;
-    private final List<EmptyTransaction> emptyTransactions;
+    private final Map<ProducerSession, EmptyTransaction> emptyTransactions;
     private final long numTransactionalCommit;
     private final long numTransactionalAbort;
     private final IntSummaryStatistics txnSizeStats;
@@ -37,7 +36,7 @@ public final class TransactionalInfo {
     public TransactionalInfo(Map<ProducerSession, FirstBatchInTxn> openTransactions,
                              Batch firstBatch,
                              Batch lastBatch,
-                             List<EmptyTransaction> emptyTransactions,
+                             Map<ProducerSession, EmptyTransaction> emptyTransactions,
                              long numTransactionalCommit, long numTransactionalAbort,
                              IntSummaryStatistics txnSizeStats,
                              IntSummaryStatistics txnDurationStats) {
@@ -63,7 +62,7 @@ public final class TransactionalInfo {
         return lastBatch;
     }
 
-    public List<EmptyTransaction> emptyTransactions() {
+    public Map<ProducerSession, EmptyTransaction> emptyTransactions() {
         return emptyTransactions;
     }
 
