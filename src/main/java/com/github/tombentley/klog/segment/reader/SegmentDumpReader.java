@@ -70,7 +70,8 @@ public class SegmentDumpReader {
             "producerEpoch: (?<producerEpoch>-?[0-9]+) " +
             "partitionLeaderEpoch: (?<partitionLeaderEpoch>[0-9]+) " +
             "isTransactional: (?<isTransactional>true|false) " +
-            "isControl: (?<isControl>true|false) " +
+            "isControl: (?<isControl>true|false)" +
+            "( deleteHorizonMs: (?<deleteHorizonMs>OptionalLong\\.empty|[0-9]+))? " +
             "position: (?<position>[0-9]+) " +
             "CreateTime: (?<createTime>[0-9]+) " +
             "size: (?<size>[0-9]+) " +

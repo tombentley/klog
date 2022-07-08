@@ -114,7 +114,9 @@ class SegmentDumpReaderTest {
                       "baseOffset: 2 lastOffset: 2 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 88 CreateTime: 1632815305550 size: 75 magic: 2 compresscodec: none crc: 945198711 isvalid: true\n" +
                       "| offset: 2 CreateTime: 1632815305550 keySize: -1 valueSize: 7 sequence: -1 headerKeys: []\n" +
                       "baseOffset: 3 lastOffset: 3 count: 1 baseSequence: -1 lastSequence: -1 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 0 isTransactional: false isControl: false position: 163 CreateTime: 1632815307188 size: 79 magic: 2 compresscodec: none crc: 757930674 isvalid: true\n" +
-                      "| offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: []\n";
+                      "| offset: 3 CreateTime: 1632815307188 keySize: -1 valueSize: 11 sequence: -1 headerKeys: []\n" +
+                      "baseOffset: 4 lastOffset: 4 count: 1 baseSequence: 0 lastSequence: 0 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 63 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 0 CreateTime: 1655761268674 size: 165 magic: 2 compresscodec: none crc: 1118624748 isvalid: true\n" +
+                      "| offset: 4 CreateTime: 1655761268674 keySize: 71 valueSize: 24 sequence: 0 headerKeys: []\n";
         List<Batch> batches = new SegmentDumpReader().readSegment("<test-input>", content.lines())
                 .batches().collect(Collectors.toList());
         assertEquals(2, batches.get(0).messages().size());
@@ -128,7 +130,6 @@ class SegmentDumpReaderTest {
         assertEquals(7, batches.get(1).messages().get(0).line());
         assertEquals(8, batches.get(2).line());
         assertEquals(9, batches.get(2).messages().get(0).line());
-
     }
 
     /** --deep-iteration --print-data-log */
