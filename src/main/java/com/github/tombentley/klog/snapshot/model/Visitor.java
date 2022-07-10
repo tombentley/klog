@@ -14,20 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog;
+package com.github.tombentley.klog.snapshot.model;
 
-import io.quarkus.picocli.runtime.annotations.TopCommand;
-import picocli.CommandLine.Command;
-
-@TopCommand
-@Command(name = "klog",
-        description = "Analyse segment dumps from `kafka-dump-logs.sh`",
-        subcommands = {
-                SegmentDump.class,
-                SnapshotDump.class,
-                TxnCoordinatingPartition.class,
-                GroupCoordinatingPartition.class
-        }
-)
-public class Klog {
+public interface Visitor {
+    void pidSnapshot(ProducerState producerSnapshot);
 }

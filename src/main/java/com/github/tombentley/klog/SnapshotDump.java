@@ -16,18 +16,15 @@
  */
 package com.github.tombentley.klog;
 
-import io.quarkus.picocli.runtime.annotations.TopCommand;
+import com.github.tombentley.klog.snapshot.cli.Cat;
 import picocli.CommandLine.Command;
 
-@TopCommand
-@Command(name = "klog",
-        description = "Analyse segment dumps from `kafka-dump-logs.sh`",
+@Command(
+        name = "snapshot",
+        description = "Analyse snapshot dumps previously produced by kafka-dump-logs.sh",
         subcommands = {
-                SegmentDump.class,
-                SnapshotDump.class,
-                TxnCoordinatingPartition.class,
-                GroupCoordinatingPartition.class
+                Cat.class
         }
 )
-public class Klog {
+public class SnapshotDump {
 }

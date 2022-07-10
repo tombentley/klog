@@ -14,20 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog;
+package com.github.tombentley.klog.snapshot.reader;
 
-import io.quarkus.picocli.runtime.annotations.TopCommand;
-import picocli.CommandLine.Command;
+import com.github.tombentley.klog.snapshot.model.ProducerState;
+import java.util.function.Function;
 
-@TopCommand
-@Command(name = "klog",
-        description = "Analyse segment dumps from `kafka-dump-logs.sh`",
-        subcommands = {
-                SegmentDump.class,
-                SnapshotDump.class,
-                TxnCoordinatingPartition.class,
-                GroupCoordinatingPartition.class
+/**
+ * A pid snapshot dump can only contain transactional producer records.
+ */
+public class AssertTransactionalProducer implements Function<ProducerState, ProducerState> {
+    @Override
+    public ProducerState apply(ProducerState state) {
+        if (state.producerId() == -1 && state.producerEpoch() == -1) {
+            throw new IllegalStateException(
+                    String.format("%s:%d: Found non transactional producer record",
+                    state.filename(), state.line()));
         }
-)
-public class Klog {
+        return state;
+    }
 }

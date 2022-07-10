@@ -351,7 +351,7 @@ public class SegmentDumpReader {
                           name.matches(Segment.Type.CONSUMER_OFFSETS.topicName + "-[0-9]+") ? Segment.Type.CONSUMER_OFFSETS : Segment.Type.DATA;
         } else {
             // Can happen if kafka-dump-log.sh run from the directory containing the segment
-            System.err.printf("%s: Don't know original segment file name, assuming a normal segment", dumpFilename);
+            System.err.printf("%s: Don't know original segment file name, assuming a normal segment%n", dumpFilename);
             type = Segment.Type.DATA;
         }
         return type;
