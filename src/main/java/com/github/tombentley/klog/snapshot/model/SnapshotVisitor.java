@@ -14,10 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog.segment.model;
+package com.github.tombentley.klog.snapshot.model;
 
-public interface Located {
-    String filename();
-    int line();
-
+public interface SnapshotVisitor {
+    void producerSnapshot(ProducerState producerSnapshot);
 }

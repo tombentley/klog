@@ -20,7 +20,7 @@ import com.github.tombentley.klog.snapshot.model.ProducerState;
 import java.util.stream.Stream;
 
 public class Snapshot {
-    public static enum Type {
+    public enum Type {
         /*
          * For each topic partition, the broker maintains an in-memory mapping from the PID to the epoch,
          * sequence number, the last offset successfully written to the log, and the coordinator epoch

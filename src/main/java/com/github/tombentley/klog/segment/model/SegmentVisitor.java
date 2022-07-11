@@ -14,8 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog.snapshot.model;
+package com.github.tombentley.klog.segment.model;
 
-public interface Visitor {
-    void pidSnapshot(ProducerState producerSnapshot);
+public interface SegmentVisitor {
+    void batch(Batch controlMessage);
+
+    void controlMessage(ControlMessage controlMessage);
+
+    void stateChangeDeletion(TransactionStateDeletion transactionStateDeletion);
+
+    void stateChange(TransactionStateChange stateChangeMessage);
+
+    void dataMessage(DataMessage dataMessage);
 }

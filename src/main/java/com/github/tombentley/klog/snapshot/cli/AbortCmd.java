@@ -16,13 +16,11 @@
  */
 package com.github.tombentley.klog.snapshot.cli;
 
-import com.github.tombentley.klog.common.Located;
 import com.github.tombentley.klog.snapshot.model.ProducerState;
 import com.github.tombentley.klog.snapshot.model.SnapshotVisitor;
 import com.github.tombentley.klog.snapshot.reader.Snapshot;
 import com.github.tombentley.klog.snapshot.reader.SnapshotDumpReader;
 import java.io.File;
-import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Predicate;
@@ -31,21 +29,18 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
 @CommandLine.Command(
-        name = "cat",
-        description = "Print snapshot dumps previously produced by kafka-dump-logs.sh."
+        name = "abort-cmd",
+        description = "Print abort commands for a given producer ID and epoch."
 )
-public class Cat implements Runnable {
-    @Option(names = {"--line-numbers", "-l"},
-            description = "Include line numbers in the output",
-            defaultValue = "false")
-    Boolean lineNumbers;
-
+public class AbortCmd implements Runnable {
     @Option(names = {"--pid"},
-            description = "Select only records with the given producer id.")
+            description = "Select only records with the given producer id.",
+            required = true)
     Integer pid;
 
     @Option(names = {"--producer-epoch"},
-            description = "Select only records with the given producer epoch.")
+            description = "Select only records with the given producer epoch.",
+            required = true)
     Integer producerEpoch;
 
     @CommandLine.Parameters(index = "0..*", arity = "1..",
@@ -54,7 +49,7 @@ public class Cat implements Runnable {
 
     @Override
     public void run() {
-        SnapshotVisitor visitor = new OutputVisitor(dumpFiles.size() > 1, lineNumbers);
+        SnapshotVisitor visitor = new OutputVisitor();
         SnapshotDumpReader snapshotDumpReader = new SnapshotDumpReader();
         // Sort to get into offset order
         dumpFiles.stream().sorted(Comparator.comparing(File::getName)).forEach(dumpFile -> {
@@ -71,32 +66,12 @@ public class Cat implements Runnable {
     }
 
     private static class OutputVisitor implements SnapshotVisitor {
-        private final boolean lineNumbers;
-        private final boolean fileName;
-
-        public OutputVisitor(boolean fileName, boolean lineNumbers) {
-            this.fileName = fileName;
-            this.lineNumbers = lineNumbers;
-        }
-
-        private void location(Located batch) {
-            if (fileName) {
-                System.out.printf("%s:", batch.filename());
-            }
-            if (lineNumbers) {
-                System.out.printf("%d: ", batch.line());
-            }
-        }
-
         @Override
         public void producerSnapshot(ProducerState msg) {
-            location(msg);
             System.out.println(CommandLine.Help.Ansi.AUTO.string(
-                    String.format("ProducerState(producerId=@|blue,bold %d|@, producerEpoch=@|blue,bold %d|@, coordinatorEpoch=@|blue,bold %d|@, " +
-                                    "currentTxnFirstOffset=%d%s, firstSequence=%d, lastSequence=%d, lastOffset=%d, offsetDelta=%d, timestamp=%s)",
-                            msg.producerId(), msg.producerEpoch(), msg.coordinatorEpoch(), msg.currentTxnFirstOffset(),
-                            ", lastTimestamp=" + Instant.ofEpochMilli(msg.lastTimestamp()), msg.firstSequence(), msg.lastSequence(),
-                            msg.lastOffset(), msg.offsetDelta(), Instant.ofEpochMilli(msg.timestamp()))));
+                    String.format("$KAFKA_HOME/bin/kafka-transactions.sh --bootstrap-server $BOOTSTRAP_URL abort --topic $TOPIC_NAME " +
+                                    "--partition $PART_NUM --producer-id %d --producer-epoch %d --coordinator-epoch %d",
+                            msg.producerId(), msg.producerEpoch(), msg.coordinatorEpoch())));
         }
     }
 }

@@ -16,6 +16,8 @@
  */
 package com.github.tombentley.klog.snapshot.reader;
 
+import com.github.tombentley.klog.snapshot.model.ProducerState;
+import java.util.List;
 import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,10 @@ class SnapshotDumpReaderTest {
         assertEquals(null, snapshot.topicName());
         assertEquals("<test-input>", snapshot.dumpFileName());
         assertEquals(Snapshot.Type.PRODUCER_SNAPSHOT, snapshot.type());
-        assertEquals(3, snapshot.states().collect(Collectors.toList()).size());
+        List<ProducerState> states = snapshot.states().collect(Collectors.toList());
+        assertEquals(3, states.size());
+        assertEquals(57, states.stream()
+                .filter(s -> s.producerId() == 199398).findFirst().get().coordinatorEpoch());
     }
 
     @Test
@@ -46,6 +51,9 @@ class SnapshotDumpReaderTest {
         assertEquals(null, snapshot.topicName());
         assertEquals("<test-input>", snapshot.dumpFileName());
         assertEquals(Snapshot.Type.PRODUCER_SNAPSHOT, snapshot.type());
-        assertEquals(3, snapshot.states().collect(Collectors.toList()).size());
+        List<ProducerState> states = snapshot.states().collect(Collectors.toList());
+        assertEquals(3, states.size());
+        assertEquals(57, states.stream()
+                .filter(s -> s.producerId() == 199398).findFirst().get().coordinatorEpoch());
     }
 }

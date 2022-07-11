@@ -14,17 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog;
+package com.github.tombentley.klog.command;
 
-import com.github.tombentley.klog.snapshot.cli.Cat;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
-@Command(
-        name = "snapshot",
-        description = "Analyse snapshot dumps previously produced by kafka-dump-logs.sh",
-        subcommands = {
-                Cat.class
-        }
+@Command(name="group-coordinating-partition",
+    description = "Determine the coordinating partition of __consumer_offsets for a given group.id"
 )
-public class SnapshotDump {
+public class GroupCoordinatingPartition implements Runnable {
+
+    @Parameters(arity = "1", index = "0",
+            description = "The group.id")
+    String id;
+
+    @Option(names = "num-partitions",
+        description = "The number of partitions of __consumer_offsets",
+    defaultValue = "50")
+    int partitions;
+
+    @Override
+    public void run() {
+        System.out.println(abs(id.hashCode()) % partitions);
+    }
+
+    private int abs(int n) {
+        return (n == Integer.MIN_VALUE) ? 0 : Math.abs(n);
+    }
 }

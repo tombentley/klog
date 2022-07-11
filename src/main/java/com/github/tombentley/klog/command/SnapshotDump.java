@@ -14,16 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog.segment.model;
+package com.github.tombentley.klog.command;
 
-public interface Visitor {
-    void batch(Batch controlMessage);
+import com.github.tombentley.klog.snapshot.cli.AbortCmd;
+import com.github.tombentley.klog.snapshot.cli.Cat;
+import picocli.CommandLine.Command;
 
-    void controlMessage(ControlMessage controlMessage);
-
-    void stateChangeDeletion(TransactionStateDeletion transactionStateDeletion);
-
-    void stateChange(TransactionStateChange stateChangeMessage);
-
-    void dataMessage(DataMessage dataMessage);
+@Command(
+        name = "snapshot",
+        description = "Analyse snapshot dumps previously produced by kafka-dump-logs.sh",
+        subcommands = {
+                Cat.class,
+                AbortCmd.class
+        }
+)
+public class SnapshotDump {
 }

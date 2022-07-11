@@ -16,6 +16,8 @@
  */
 package com.github.tombentley.klog.segment.model;
 
+import com.github.tombentley.klog.common.Located;
+
 /**
  * Common interface for different kinds of message
  */
@@ -26,5 +28,5 @@ public interface BaseMessage extends Located {
     int valueSize();
     int sequence();
     String headerKeys();
-    void accept(Visitor visitor);
+    void accept(SegmentVisitor visitor);
 }

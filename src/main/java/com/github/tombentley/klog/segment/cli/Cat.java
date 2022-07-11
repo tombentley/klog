@@ -16,6 +16,7 @@
  */
 package com.github.tombentley.klog.segment.cli;
 
+import com.github.tombentley.klog.common.Located;
 import java.io.File;
 import java.time.Instant;
 import java.util.Comparator;
@@ -26,10 +27,9 @@ import java.util.stream.Stream;
 import com.github.tombentley.klog.segment.model.Batch;
 import com.github.tombentley.klog.segment.model.ControlMessage;
 import com.github.tombentley.klog.segment.model.DataMessage;
-import com.github.tombentley.klog.segment.model.Located;
 import com.github.tombentley.klog.segment.model.TransactionStateChange;
 import com.github.tombentley.klog.segment.model.TransactionStateDeletion;
-import com.github.tombentley.klog.segment.model.Visitor;
+import com.github.tombentley.klog.segment.model.SegmentVisitor;
 import com.github.tombentley.klog.segment.reader.Segment;
 import com.github.tombentley.klog.segment.reader.SegmentDumpReader;
 import picocli.CommandLine;
@@ -38,7 +38,7 @@ import picocli.CommandLine.Parameters;
 
 @CommandLine.Command(
         name = "cat",
-        description = "Print segment dumps previously produced by kafka-dump-logs.sh." +
+        description = "Print segment dumps previously produced by kafka-dump-logs.sh. " +
                       "This is slightly more useful that just looking at the dumps directly, because it converts" +
                       "the timestamps into something human readable."
 )
@@ -65,12 +65,12 @@ public class Cat implements Runnable {
     String transactionalId;
 
     @Parameters(index = "0..*", arity = "1..",
-            description = "Segment dumps produced by `kafka-dump-logs.sh`.")
+            description = "Segment dumps produced by kafka-dump-logs.sh.")
     List<File> dumpFiles;
 
     @Override
     public void run() {
-        Visitor visitor = new OutputVisitor(dumpFiles.size() > 1, lineNumbers);
+        SegmentVisitor visitor = new OutputVisitor(dumpFiles.size() > 1, lineNumbers);
         SegmentDumpReader segmentDumpReader = new SegmentDumpReader();
         // Sort to get into offset order
         dumpFiles.stream().sorted(Comparator.comparing(File::getName)).forEach(dumpFile -> {
@@ -89,7 +89,7 @@ public class Cat implements Runnable {
         });
     }
 
-    private static class OutputVisitor implements Visitor {
+    private static class OutputVisitor implements SegmentVisitor {
         private final boolean lineNumbers;
         private final boolean fileName;
 

@@ -14,8 +14,7 @@ package com.github.tombentley.klog.snapshot.model;/*
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import com.github.tombentley.klog.snapshot.model.Located;
-import com.github.tombentley.klog.snapshot.model.Visitor;
+import com.github.tombentley.klog.common.Located;
 import java.util.Objects;
 
 /**
@@ -166,7 +165,7 @@ public final class ProducerState implements Located {
                 '}';
     }
 
-    public void accept(Visitor visitor) {
-        visitor.pidSnapshot(this);
+    public void accept(SnapshotVisitor visitor) {
+        visitor.producerSnapshot(this);
     }
 }
