@@ -28,7 +28,7 @@ public class Snapshot {
          * The broker keeps the two most recent snapshots. If there is no snapshot when the broker
          * restarts, it rebuilds the map by scanning the full log.
          */
-        PRODUCER_SNAPSHOT(null);
+        PRODUCER(null);
         public final String topicName;
         Type(String topicName) {
             this.topicName = topicName;

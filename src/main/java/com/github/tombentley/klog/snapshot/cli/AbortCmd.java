@@ -30,7 +30,7 @@ import picocli.CommandLine.Option;
 
 @CommandLine.Command(
         name = "abort-cmd",
-        description = "Print abort commands for a given producer ID and epoch."
+        description = "Print the kafka-transactions.sh command to abort a transaction identified by a given producer ID and epoch."
 )
 public class AbortCmd implements Runnable {
     @Option(names = {"--pid"},

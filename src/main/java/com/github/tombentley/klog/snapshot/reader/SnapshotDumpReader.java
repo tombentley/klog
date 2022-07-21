@@ -67,7 +67,7 @@ public class SnapshotDumpReader {
             throw new UnexpectedFileContent("Expected > 0 lines");
         }
         // read content lines
-        Snapshot.Type type = Snapshot.Type.PRODUCER_SNAPSHOT;
+        Snapshot.Type type = Snapshot.Type.PRODUCER;
         Stream<ProducerState> states = producerStates(dumpFileName, lineNumber[0],
                 type, StreamSupport.stream(spliterator, false));
         return new Snapshot(dumpFileName, type, topicName(dumpFile[0]), states);

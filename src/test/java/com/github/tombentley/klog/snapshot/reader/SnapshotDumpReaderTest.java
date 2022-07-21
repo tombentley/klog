@@ -33,7 +33,7 @@ class SnapshotDumpReaderTest {
                 .readSnapshot("<test-input>", content.lines());
         assertEquals(null, snapshot.topicName());
         assertEquals("<test-input>", snapshot.dumpFileName());
-        assertEquals(Snapshot.Type.PRODUCER_SNAPSHOT, snapshot.type());
+        assertEquals(Snapshot.Type.PRODUCER, snapshot.type());
         List<ProducerState> states = snapshot.states().collect(Collectors.toList());
         assertEquals(3, states.size());
         assertEquals(57, states.stream()
@@ -50,7 +50,7 @@ class SnapshotDumpReaderTest {
                 .readSnapshot("<test-input>", content.lines());
         assertEquals(null, snapshot.topicName());
         assertEquals("<test-input>", snapshot.dumpFileName());
-        assertEquals(Snapshot.Type.PRODUCER_SNAPSHOT, snapshot.type());
+        assertEquals(Snapshot.Type.PRODUCER, snapshot.type());
         List<ProducerState> states = snapshot.states().collect(Collectors.toList());
         assertEquals(3, states.size());
         assertEquals(57, states.stream()

@@ -32,7 +32,7 @@ import picocli.CommandLine.Option;
 
 @CommandLine.Command(
         name = "cat",
-        description = "Print snapshot dumps previously produced by kafka-dump-logs.sh."
+        description = "Print producer snapshot dumps previously obtained using kafka-dump-logs.sh."
 )
 public class Cat implements Runnable {
     @Option(names = {"--line-numbers", "-l"},

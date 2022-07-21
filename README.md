@@ -75,7 +75,7 @@ When multiple options are present a batch or message must support all the filter
 This will report a statistics transactions in the given segment dumps of normal partitions.
 
 ```shell
-klog segment txn-stat 00000000000002226093.log.dump
+klog segment txn-stat *.log.dump
 ```
 
 Example output:
@@ -142,10 +142,16 @@ KAFKA_HOME/bin/kafka-transactions.sh --bootstrap-server $BOOTSTRAP_URL abort --t
 Confirm that `read_committed` consumer groups are stuck on one or more topic partitions and their lag is growing by using `kafka-consumer-groups.sh`.
 
 Get the raw partition folders and dump all segments containing the stuck last stable offset (LSO) using `kafka-dump-log.sh`.
+It is required to run this command inside the partition directory containing the row segments, as shown in the following example:
+
+```shell
+cd /path/to/my-topic-9
+kafka-dump-log.sh --deep-iteration --files 00000000000912375285.log > 00000000000912375285.log.dump
+```
 
 Find the hanging transactions running `klog segment txn-stat` on these dumps to find the PID and producer epoch of the session lacking a control record.
 
-If the partition is stuck but there no `open_txn` is found, it means that the retention policy has already kicked in.
+If the partition is stuck but there is no `open_txn` found, it probably means that the retention policy has already kicked in, i.e. the log segments in which data records were appended in a transaction which lacked a following end marker have been deleted, but the producer snapshot retains knowledge of their having existed.
 In this case you can simply delete all `.snapshot` files from partition folder in all brokers and do a rolling restart.
 That way, the in-memory PID map will be recreated by scanning the full log and will have no memory of the hanging transaction.
 

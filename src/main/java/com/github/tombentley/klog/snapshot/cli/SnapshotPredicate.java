@@ -25,7 +25,7 @@ class SnapshotPredicate {
         Predicate<ProducerState> predicate = null;
         if (pid != null) {
             int pidPrim = pid;
-            if (type == Snapshot.Type.PRODUCER_SNAPSHOT) {
+            if (type == Snapshot.Type.PRODUCER) {
                 predicate = state -> state.producerId() == pidPrim;
             } else {
                 throw new RuntimeException();
@@ -34,7 +34,7 @@ class SnapshotPredicate {
         if (producerEpoch != null) {
             int epoch = producerEpoch;
             Predicate<ProducerState> epochPredicate;
-            if (type == Snapshot.Type.PRODUCER_SNAPSHOT) {
+            if (type == Snapshot.Type.PRODUCER) {
                 epochPredicate = state -> state.producerEpoch() == epoch;
             } else {
                 throw new RuntimeException();

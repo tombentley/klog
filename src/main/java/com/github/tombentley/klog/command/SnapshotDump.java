@@ -22,7 +22,7 @@ import picocli.CommandLine.Command;
 
 @Command(
         name = "snapshot",
-        description = "Analyse snapshot dumps previously produced by kafka-dump-logs.sh",
+        description = "Analyse producer snapshot dumps previously obtained using kafka-dump-logs.sh",
         subcommands = {
                 Cat.class,
                 AbortCmd.class
