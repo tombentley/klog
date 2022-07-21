@@ -17,28 +17,18 @@
 package com.github.tombentley.klog.snapshot.cli;
 
 import com.github.tombentley.klog.snapshot.model.ProducerState;
-import com.github.tombentley.klog.snapshot.reader.Snapshot;
 import java.util.function.Predicate;
 
 class SnapshotPredicate {
-    static Predicate<ProducerState> predicate(Snapshot.Type type, Integer pid, Integer producerEpoch) {
+    static Predicate<ProducerState> predicate(Integer pid, Integer producerEpoch) {
         Predicate<ProducerState> predicate = null;
         if (pid != null) {
             int pidPrim = pid;
-            if (type == Snapshot.Type.PRODUCER) {
-                predicate = state -> state.producerId() == pidPrim;
-            } else {
-                throw new RuntimeException();
-            }
+            predicate = state -> state.producerId() == pidPrim;
         }
         if (producerEpoch != null) {
             int epoch = producerEpoch;
-            Predicate<ProducerState> epochPredicate;
-            if (type == Snapshot.Type.PRODUCER) {
-                epochPredicate = state -> state.producerEpoch() == epoch;
-            } else {
-                throw new RuntimeException();
-            }
+            Predicate<ProducerState> epochPredicate = state -> state.producerEpoch() == epoch;
             predicate = predicate != null ? predicate.and(epochPredicate) : epochPredicate;
         }
         return predicate;

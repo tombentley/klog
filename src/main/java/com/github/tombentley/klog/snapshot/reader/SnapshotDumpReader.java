@@ -25,7 +25,6 @@ import static java.lang.Integer.parseInt;
 import static java.lang.Long.parseLong;
 import static java.lang.Short.parseShort;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Spliterator;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -45,7 +44,7 @@ public class SnapshotDumpReader {
             "offsetDelta: (?<offsetDelta>[0-9]+) " +
             "timestamp: (?<timestamp>[0-9]+)");
 
-    public Snapshot readSnapshot(File dumpFile) {
+    public ProducerSnapshot readSnapshot(File dumpFile) {
         Stream<String> lines;
         try {
             lines = Files.lines(dumpFile.toPath());
@@ -55,7 +54,7 @@ public class SnapshotDumpReader {
         return readSnapshot(dumpFile.getName(), lines);
     }
 
-    public Snapshot readSnapshot(String dumpFileName, Stream<String> lines) {
+    public ProducerSnapshot readSnapshot(String dumpFileName, Stream<String> lines) {
         File[] dumpFile = {null};
         int[] lineNumber = {0};
         Spliterator<String> spliterator = lines.spliterator();
@@ -67,10 +66,9 @@ public class SnapshotDumpReader {
             throw new UnexpectedFileContent("Expected > 0 lines");
         }
         // read content lines
-        Snapshot.Type type = Snapshot.Type.PRODUCER;
         Stream<ProducerState> states = producerStates(dumpFileName, lineNumber[0],
-                type, StreamSupport.stream(spliterator, false));
-        return new Snapshot(dumpFileName, type, topicName(dumpFile[0]), states);
+                StreamSupport.stream(spliterator, false));
+        return new ProducerSnapshot(dumpFileName, topicName(dumpFile[0]), states);
     }
 
     private File readDumpingLine(String line) {
@@ -85,7 +83,7 @@ public class SnapshotDumpReader {
         return file;
     }
 
-    private Stream<ProducerState> producerStates(String dumpFileName, int startLineNumber, Snapshot.Type type, Stream<String> lines) {
+    private Stream<ProducerState> producerStates(String dumpFileName, int startLineNumber, Stream<String> lines) {
         Stream<ProducerState> outputStream = lines.flatMap(new Function<String, Stream<? extends ProducerState>>() {
             int lineNumber = startLineNumber;
 
@@ -130,18 +128,5 @@ public class SnapshotDumpReader {
             return parent.getName().substring(parent.getName().lastIndexOf("-"));
         }
         return null;
-    }
-
-    /*
-    mvn clean compile exec:java \
-      -Dexec.mainClass="com.github.tombentley.klog.snapshot.reader.SnapshotDumpReader" \
-      -Dexec.args="/home/fvaleri/Documents/setup/tmp/ENTMQST-4101/partitions/__consumer_offsets-27/00000000000933607637.snapshot.dump-2.7"
-    */
-    public static void main(String[] args) {
-        System.out.println();
-        SnapshotDumpReader dumpReader = new SnapshotDumpReader();
-        // Sort to get into offset order
-        Arrays.stream(args).map(File::new).flatMap(dumpFile ->
-                dumpReader.readSnapshot(dumpFile).states()).forEach(System.out::println);
     }
 }

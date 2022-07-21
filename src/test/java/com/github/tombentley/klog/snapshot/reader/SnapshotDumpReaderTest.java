@@ -29,11 +29,10 @@ class SnapshotDumpReaderTest {
                       "producerId: 171101 producerEpoch: 12 coordinatorEpoch: 54 currentTxnFirstOffset: None firstSequence: 0 lastSequence: 0 lastOffset: 932442537 offsetDelta: 0 timestamp: 1655628030307\n" +
                       "producerId: 199398 producerEpoch: 0 coordinatorEpoch: 57 currentTxnFirstOffset: Some(933607621) firstSequence: 0 lastSequence: 0 lastOffset: 933607621 offsetDelta: 0 timestamp: 1655761267833\n" +
                       "producerId: 173102 producerEpoch: 16 coordinatorEpoch: 59 currentTxnFirstOffset: None firstSequence: 0 lastSequence: 0 lastOffset: 933203854 offsetDelta: 0 timestamp: 1655704254875\n";
-        Snapshot snapshot = new SnapshotDumpReader()
+        ProducerSnapshot snapshot = new SnapshotDumpReader()
                 .readSnapshot("<test-input>", content.lines());
         assertEquals(null, snapshot.topicName());
         assertEquals("<test-input>", snapshot.dumpFileName());
-        assertEquals(Snapshot.Type.PRODUCER, snapshot.type());
         List<ProducerState> states = snapshot.states().collect(Collectors.toList());
         assertEquals(3, states.size());
         assertEquals(57, states.stream()
@@ -46,11 +45,10 @@ class SnapshotDumpReaderTest {
                 "producerId: 171101 producerEpoch: 12 coordinatorEpoch: 54 currentTxnFirstOffset: None lastTimestamp: 1655628030307 firstSequence: 0 lastSequence: 0 lastOffset: 932442537 offsetDelta: 0 timestamp: 1655628030307\n" +
                 "producerId: 199398 producerEpoch: 0 coordinatorEpoch: 57 currentTxnFirstOffset: Some(933607621) lastTimestamp: 1655761267833 firstSequence: 0 lastSequence: 0 lastOffset: 933607621 offsetDelta: 0 timestamp: 1655761267833\n" +
                 "producerId: 173102 producerEpoch: 16 coordinatorEpoch: 59 currentTxnFirstOffset: None lastTimestamp: 1655704254875 firstSequence: 0 lastSequence: 0 lastOffset: 933203854 offsetDelta: 0 timestamp: 1655704254875\n";
-        Snapshot snapshot = new SnapshotDumpReader()
+        ProducerSnapshot snapshot = new SnapshotDumpReader()
                 .readSnapshot("<test-input>", content.lines());
         assertEquals(null, snapshot.topicName());
         assertEquals("<test-input>", snapshot.dumpFileName());
-        assertEquals(Snapshot.Type.PRODUCER, snapshot.type());
         List<ProducerState> states = snapshot.states().collect(Collectors.toList());
         assertEquals(3, states.size());
         assertEquals(57, states.stream()

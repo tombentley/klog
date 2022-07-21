@@ -19,7 +19,7 @@ package com.github.tombentley.klog.snapshot.cli;
 import com.github.tombentley.klog.common.Located;
 import com.github.tombentley.klog.snapshot.model.ProducerState;
 import com.github.tombentley.klog.snapshot.model.SnapshotVisitor;
-import com.github.tombentley.klog.snapshot.reader.Snapshot;
+import com.github.tombentley.klog.snapshot.reader.ProducerSnapshot;
 import com.github.tombentley.klog.snapshot.reader.SnapshotDumpReader;
 import java.io.File;
 import java.time.Instant;
@@ -58,15 +58,13 @@ public class Cat implements Runnable {
         SnapshotDumpReader snapshotDumpReader = new SnapshotDumpReader();
         // Sort to get into offset order
         dumpFiles.stream().sorted(Comparator.comparing(File::getName)).forEach(dumpFile -> {
-            Snapshot snapshot = snapshotDumpReader.readSnapshot(dumpFile);
-            Predicate<ProducerState> predicate = SnapshotPredicate.predicate(snapshot.type(), pid, producerEpoch);
+            ProducerSnapshot snapshot = snapshotDumpReader.readSnapshot(dumpFile);
+            Predicate<ProducerState> predicate = SnapshotPredicate.predicate(pid, producerEpoch);
             Stream<ProducerState> locatedStream = snapshot.states();
             if (predicate != null) {
                 locatedStream = locatedStream.filter(predicate);
             }
-            locatedStream.forEach(batch -> {
-                batch.accept(visitor);
-            });
+            locatedStream.forEach(batch -> batch.accept(visitor));
         });
     }
 

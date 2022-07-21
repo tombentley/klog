@@ -390,23 +390,4 @@ public class SegmentDumpReader {
         }
         return startingOffset;
     }
-
-
-
-    public static void main(String[] args) {
-        SegmentDumpReader segmentDumpReader = new SegmentDumpReader();
-        // Sort to get into offset order
-        Arrays.stream(args).map(File::new).map(dumpFile ->
-                segmentDumpReader.readSegment(dumpFile).batches().collect(TransactionalInfoCollector.collector())).forEach(x -> {
-            System.out.println("First batch: " + x.firstBatch());
-            x.emptyTransactions().forEach(txn -> System.out.println("Empty txn: " + txn));
-            System.out.println("Last batch: " + x.lastBatch());
-            x.openTransactions().forEach((sess, txn) -> System.out.println("Open transaction: " + sess + "->" + txn));
-            System.out.println("#committed: " + x.numTransactionalCommit());
-            System.out.println("#aborted: " + x.numTransactionalAbort());
-            System.out.println("Txn sizes: " + x.txnSizeStats());
-            System.out.println("Txn durations(ms): " + x.txnDurationStats());
-        });
-    }
-
 }

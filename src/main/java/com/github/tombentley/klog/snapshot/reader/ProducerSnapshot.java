@@ -19,43 +19,28 @@ package com.github.tombentley.klog.snapshot.reader;
 import com.github.tombentley.klog.snapshot.model.ProducerState;
 import java.util.stream.Stream;
 
-public class Snapshot {
-    public enum Type {
-        /*
-         * For each topic partition, the broker maintains an in-memory mapping from the PID to the epoch,
-         * sequence number, the last offset successfully written to the log, and the coordinator epoch
-         * from each transactional producer. This is periodically stored in a {@code .snapshot} file.
-         * The broker keeps the two most recent snapshots. If there is no snapshot when the broker
-         * restarts, it rebuilds the map by scanning the full log.
-         */
-        PRODUCER(null);
-        public final String topicName;
-        Type(String topicName) {
-            this.topicName = topicName;
-        }
-    }
-
+/*
+ * For each topic partition, the broker maintains an in-memory mapping from the PID to the epoch,
+ * sequence number, the last offset successfully written to the log, and the coordinator epoch
+ * from each transactional producer. This is periodically stored in a {@code .snapshot} file.
+ * The broker keeps the two most recent snapshots. If there is no snapshot when the broker
+ * restarts, it rebuilds the map by scanning the full log.
+ */
+public class ProducerSnapshot {
     private final String dumpFileName;
-    private final Type type;
     private final String topicName;
     private final Stream<ProducerState> states;
 
-    public Snapshot(String dumpFileName,
-                    Type type,
-                    String topicName,
-                    Stream<ProducerState> states) {
+    public ProducerSnapshot(String dumpFileName,
+                            String topicName,
+                            Stream<ProducerState> states) {
         this.dumpFileName = dumpFileName;
-        this.type = type;
         this.topicName = topicName;
         this.states = states;
     }
 
     public String dumpFileName() {
         return dumpFileName;
-    }
-
-    public Type type() {
-        return type;
     }
 
     public String topicName() {
