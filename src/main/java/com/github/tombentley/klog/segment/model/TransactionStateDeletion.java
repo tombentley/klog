@@ -131,7 +131,7 @@ public final class TransactionStateDeletion implements TransactionStateMessage {
     }
 
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(SegmentVisitor visitor) {
         visitor.stateChangeDeletion(this);
     }
 

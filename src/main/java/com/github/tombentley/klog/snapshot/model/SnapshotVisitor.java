@@ -14,19 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog.segment.model;
+package com.github.tombentley.klog.snapshot.model;
 
-import com.github.tombentley.klog.common.Located;
-
-/**
- * Common interface for different kinds of message
- */
-public interface BaseMessage extends Located {
-    long offset();
-    long createTime();
-    int keySize();
-    int valueSize();
-    int sequence();
-    String headerKeys();
-    void accept(SegmentVisitor visitor);
+public interface SnapshotVisitor {
+    void producerSnapshot(ProducerState producerSnapshot);
 }

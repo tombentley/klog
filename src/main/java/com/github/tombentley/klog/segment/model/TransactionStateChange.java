@@ -237,7 +237,7 @@ public final class TransactionStateChange implements TransactionStateMessage {
     }
 
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(SegmentVisitor visitor) {
         visitor.stateChange(this);
     }
 }

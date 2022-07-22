@@ -14,23 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog;
+package com.github.tombentley.klog.command;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-@Command(name="txn-coordinating-partition",
-    description = "Determine the coordinating partition of __transaction_state for a given transactional.id"
+@Command(name="group-coordinating-partition",
+    description = "Determine the coordinating partition of __consumer_offsets for a given group.id"
 )
-public class TxnCoordinatingPartition implements Runnable {
+public class GroupCoordinatingPartition implements Runnable {
 
     @Parameters(arity = "1", index = "0",
-            description = "The transactional.id")
+            description = "The group.id")
     String id;
 
     @Option(names = "num-partitions",
-        description = "The number of partitions of __transaction_state",
+        description = "The number of partitions of __consumer_offsets",
     defaultValue = "50")
     int partitions;
 

@@ -16,14 +16,19 @@
  */
 package com.github.tombentley.klog;
 
+import com.github.tombentley.klog.command.GroupCoordinatingPartition;
+import com.github.tombentley.klog.command.SegmentDump;
+import com.github.tombentley.klog.command.SnapshotDump;
+import com.github.tombentley.klog.command.TxnCoordinatingPartition;
 import io.quarkus.picocli.runtime.annotations.TopCommand;
 import picocli.CommandLine.Command;
 
 @TopCommand
 @Command(name = "klog",
-        description = "Analyse segment dumps from `kafka-dump-logs.sh`",
+        description = "Analyse dumps from kafka-dump-logs.sh",
         subcommands = {
                 SegmentDump.class,
+                SnapshotDump.class,
                 TxnCoordinatingPartition.class,
                 GroupCoordinatingPartition.class
         }

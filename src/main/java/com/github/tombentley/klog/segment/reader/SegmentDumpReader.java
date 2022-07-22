@@ -352,7 +352,7 @@ public class SegmentDumpReader {
                           name.matches(Segment.Type.CONSUMER_OFFSETS.topicName + "-[0-9]+") ? Segment.Type.CONSUMER_OFFSETS : Segment.Type.DATA;
         } else {
             // Can happen if kafka-dump-log.sh run from the directory containing the segment
-            System.err.printf("%s: Don't know original segment file name, assuming a normal segment", dumpFilename);
+            System.err.printf("%s: Don't know original segment file name, assuming a normal segment%n", dumpFilename);
             type = Segment.Type.DATA;
         }
         return type;
@@ -391,23 +391,4 @@ public class SegmentDumpReader {
         }
         return startingOffset;
     }
-
-
-
-    public static void main(String[] args) {
-        SegmentDumpReader segmentDumpReader = new SegmentDumpReader();
-        // Sort to get into offset order
-        Arrays.stream(args).map(File::new).map(dumpFile ->
-                segmentDumpReader.readSegment(dumpFile).batches().collect(TransactionalInfoCollector.collector())).forEach(x -> {
-            System.out.println("First batch: " + x.firstBatch());
-            x.emptyTransactions().forEach(txn -> System.out.println("Empty txn: " + txn));
-            System.out.println("Last batch: " + x.lastBatch());
-            x.openTransactions().forEach((sess, txn) -> System.out.println("Open transaction: " + sess + "->" + txn));
-            System.out.println("#committed: " + x.numTransactionalCommit());
-            System.out.println("#aborted: " + x.numTransactionalAbort());
-            System.out.println("Txn sizes: " + x.txnSizeStats());
-            System.out.println("Txn durations(ms): " + x.txnDurationStats());
-        });
-    }
-
 }

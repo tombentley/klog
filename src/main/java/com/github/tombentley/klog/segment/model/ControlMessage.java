@@ -108,7 +108,7 @@ public final class ControlMessage implements BaseMessage {
     }
 
     @Override
-    public void accept(Visitor visitor) {
+    public void accept(SegmentVisitor visitor) {
         visitor.controlMessage(this);
     }
 

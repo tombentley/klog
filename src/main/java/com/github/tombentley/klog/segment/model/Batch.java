@@ -16,6 +16,7 @@
  */
 package com.github.tombentley.klog.segment.model;
 
+import com.github.tombentley.klog.common.Located;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -234,7 +235,7 @@ public final class Batch implements Located {
         return Objects.hash(filename, line, baseOffset, lastOffset, count, baseSequence, lastSequence, producerId, producerEpoch, partitionLeaderEpoch, isTransactional, isControl, position, createTime, size, magic, compressCodec, crc, isValid, messages);
     }
 
-    public void accept(Visitor visitor) {
+    public void accept(SegmentVisitor visitor) {
         visitor.batch(this);
         for (var msg : messages()) {
             msg.accept(visitor);
