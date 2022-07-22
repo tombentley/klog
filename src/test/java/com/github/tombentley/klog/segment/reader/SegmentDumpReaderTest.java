@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class SegmentDumpReaderTest {
 
@@ -128,7 +130,6 @@ class SegmentDumpReaderTest {
         assertEquals(7, batches.get(1).messages().get(0).line());
         assertEquals(8, batches.get(2).line());
         assertEquals(9, batches.get(2).messages().get(0).line());
-
     }
 
     /** --deep-iteration --print-data-log */
@@ -232,6 +233,44 @@ class SegmentDumpReaderTest {
         assertTrue(transactionalInfo.openTransactions().isEmpty());
         assertEquals(0, transactionalInfo.txnSizeStats().getCount());
         assertEquals(0, transactionalInfo.txnDurationStats().getCount());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            // 2.7 dump
+            "Dumping /tmp/kafka-logs/foo-0/00000000000000000000.log\n" +
+                    "Starting offset: 0\n" +
+                    "baseOffset: 933607637 lastOffset: 933607638 count: 2 baseSequence: 0 lastSequence: 0 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 63 isTransactional: false isControl: false position: 0 CreateTime: 1655761268674 size: 165 magic: 2 compresscodec: NONE crc: 1118624748 isvalid: true\n" +
+                    "| offset: 933607637 CreateTime: 1655761268674 keysize: 71 valuesize: 24 sequence: 0 headerKeys: []\n" +
+                    "| offset: 933607638 CreateTime: 1655761268674 keysize: 71 valuesize: 24 sequence: 1 headerKeys: []\n",
+            // 3.2 dump
+            "Dumping /tmp/kafka-logs/foo-0/00000000000000000000.log\n" +
+                    "Starting offset: 0\n" +
+                    "baseOffset: 933607637 lastOffset: 933607637 count: 2 baseSequence: 0 lastSequence: 0 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 63 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 0 CreateTime: 1655761268674 size: 165 magic: 2 compresscodec: none crc: 1118624748 isvalid: true\n" +
+                    "| offset: 933607637 CreateTime: 1655761268674 keySize: 71 valueSize: 24 sequence: 0 headerKeys: []\n" +
+                    "| offset: 933607638 CreateTime: 1655761268674 keysize: 71 valuesize: 24 sequence: 1 headerKeys: []\n"
+    })
+    public void testSupportForMultipleLogDumpFormats(String content) {
+        List<Batch> batches = new SegmentDumpReader().readSegment("<test-input>", content.lines())
+                .batches().collect(Collectors.toList());
+        assertEquals(2, batches.get(0).messages().size());
+        assertEquals(3, batches.get(0).line());
+        assertEquals(4, batches.get(0).messages().get(0).line());
+        assertEquals(5, batches.get(0).messages().get(1).line());
+    }
+
+    @Test
+    public void testInvalidLogDumpFormat() {
+        // in 2.8 the kafka-dump-log.sh is broken: some batch record fields are leaked into the data record
+        var content = "Dumping /tmp/kafka-logs/foo-0/00000000000000000000.log\n" +
+                "Starting offset: 0\n" +
+                "baseOffset: 933607637 lastOffset: 933607637 count: 1 baseSequence: 0 lastSequence: 0 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 63 isTransactional: false isControl: false position: 0 CreateTime: 1655761268674 size: 165 magic: 2 compresscodec: NONE crc: 1118624748 isvalid: true\n" +
+                "| offset: 933607637 isValid: true crc: null keySize: 71 valueSize: 24 CreateTime: 1655761268674 baseOffset: 933607637 lastOffset: 933607637 baseSequence: 0 lastSequence: 0 producerEpoch: -1 partitionLeaderEpoch: 63 batchSize: 165 magic: 2 compressType: NONE position: 0 sequence: 0 headerKeys: []\n";
+        IllegalStateException thrown = Assertions.assertThrows(IllegalStateException.class, () -> {
+            new SegmentDumpReader().readSegment("<test-input>", content.lines())
+                    .batches().collect(Collectors.toList());
+        });
+        Assertions.assertEquals("Expected 1 data records in batch, but this doesn't look like a data record", thrown.getMessage());
     }
 
     // TODO simulate hanging transaction
