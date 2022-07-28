@@ -58,7 +58,7 @@ public class TxnStat implements Runnable {
     Integer leaderEpoch;
 
     @Parameters(index = "0..*", arity = "1..",
-            description = "Segment dumps produced by `kafka-dump-logs.sh`.")
+            description = "Segment dumps produced by kafka-dump-logs.sh.")
     List<File> dumpFiles;
 
     @Override

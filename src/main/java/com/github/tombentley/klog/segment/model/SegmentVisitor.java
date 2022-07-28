@@ -16,7 +16,7 @@
  */
 package com.github.tombentley.klog.segment.model;
 
-public interface Visitor {
+public interface SegmentVisitor {
     void batch(Batch controlMessage);
 
     void controlMessage(ControlMessage controlMessage);

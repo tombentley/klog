@@ -22,8 +22,6 @@ import com.github.tombentley.klog.segment.model.Batch;
 
 public class Segment {
 
-    ;
-
     public static enum Type {
         DATA(null),
         TRANSACTION_STATE("__transaction_state"),

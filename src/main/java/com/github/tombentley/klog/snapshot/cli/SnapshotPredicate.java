@@ -14,10 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog.segment.model;
+package com.github.tombentley.klog.snapshot.cli;
 
-public interface Located {
-    String filename();
-    int line();
+import com.github.tombentley.klog.snapshot.model.ProducerState;
+import java.util.function.Predicate;
 
+class SnapshotPredicate {
+    static Predicate<ProducerState> predicate(Integer pid, Integer producerEpoch) {
+        Predicate<ProducerState> predicate = null;
+        if (pid != null) {
+            int pidPrim = pid;
+            predicate = state -> state.producerId() == pidPrim;
+        }
+        if (producerEpoch != null) {
+            int epoch = producerEpoch;
+            Predicate<ProducerState> epochPredicate = state -> state.producerEpoch() == epoch;
+            predicate = predicate != null ? predicate.and(epochPredicate) : epochPredicate;
+        }
+        return predicate;
+    }
 }

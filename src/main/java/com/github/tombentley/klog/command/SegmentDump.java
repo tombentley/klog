@@ -14,19 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tombentley.klog.segment.model;
+package com.github.tombentley.klog.command;
 
-import com.github.tombentley.klog.common.Located;
+import com.github.tombentley.klog.segment.cli.Cat;
+import com.github.tombentley.klog.segment.cli.TxnStat;
+import picocli.CommandLine.Command;
 
-/**
- * Common interface for different kinds of message
- */
-public interface BaseMessage extends Located {
-    long offset();
-    long createTime();
-    int keySize();
-    int valueSize();
-    int sequence();
-    String headerKeys();
-    void accept(SegmentVisitor visitor);
+@Command(
+        name = "segment",
+        description = "Analyse segment dumps previously produced by kafka-dump-logs.sh",
+        subcommands = {
+                Cat.class,
+                TxnStat.class
+        }
+)
+public class SegmentDump {
 }
