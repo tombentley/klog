@@ -382,8 +382,8 @@ public class SegmentDumpReader {
     }
 
     private long readStartingOffsetLine(File segmentFile, String line) {
-        String startingOffsetPattern = "^(?i).*starting offset: ([0-9]+)$";
-        var offsetMatcher = Pattern.compile(startingOffsetPattern).matcher(line);
+        String startingOffsetPattern = "^.*starting offset: ([0-9]+)$";
+        var offsetMatcher = Pattern.compile(startingOffsetPattern, Pattern.CASE_INSENSITIVE).matcher(line);
         if (!offsetMatcher.matches()) {
             throw new UnexpectedFileContent("Expected second line to match " + startingOffsetPattern);
         }
