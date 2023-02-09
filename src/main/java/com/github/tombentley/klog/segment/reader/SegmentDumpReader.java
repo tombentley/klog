@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Spliterator;
@@ -373,14 +375,15 @@ public class SegmentDumpReader {
         if (!dumpingMatcher.matches()) {
             throw new UnexpectedFileContent("Expected first line to match " + dumpingPattern);
         } else {
-            segmentFile = new File(dumpingMatcher.group(1));
+            Path path = Paths.get(dumpingMatcher.group(1));
+            segmentFile = path.toFile();
         }
         return segmentFile;
     }
 
     private long readStartingOffsetLine(File segmentFile, String line) {
-        String startingOffsetPattern = "^Starting offset: ([0-9]+)$";
-        var offsetMatcher = Pattern.compile(startingOffsetPattern).matcher(line);
+        String startingOffsetPattern = "^.*starting offset: ([0-9]+)$";
+        var offsetMatcher = Pattern.compile(startingOffsetPattern, Pattern.CASE_INSENSITIVE).matcher(line);
         if (!offsetMatcher.matches()) {
             throw new UnexpectedFileContent("Expected second line to match " + startingOffsetPattern);
         }

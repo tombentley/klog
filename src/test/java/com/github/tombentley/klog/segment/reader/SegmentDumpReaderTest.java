@@ -243,9 +243,9 @@ class SegmentDumpReaderTest {
                     "baseOffset: 933607637 lastOffset: 933607638 count: 2 baseSequence: 0 lastSequence: 0 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 63 isTransactional: false isControl: false position: 0 CreateTime: 1655761268674 size: 165 magic: 2 compresscodec: NONE crc: 1118624748 isvalid: true\n" +
                     "| offset: 933607637 CreateTime: 1655761268674 keysize: 71 valuesize: 24 sequence: 0 headerKeys: []\n" +
                     "| offset: 933607638 CreateTime: 1655761268674 keysize: 71 valuesize: 24 sequence: 1 headerKeys: []\n",
-            // 3.2 dump
+            // 3.x dump
             "Dumping /tmp/kafka-logs/foo-0/00000000000000000000.log\n" +
-                    "Starting offset: 0\n" +
+                    "Log starting offset: 0\n" +
                     "baseOffset: 933607637 lastOffset: 933607637 count: 2 baseSequence: 0 lastSequence: 0 producerId: -1 producerEpoch: -1 partitionLeaderEpoch: 63 isTransactional: false isControl: false deleteHorizonMs: OptionalLong.empty position: 0 CreateTime: 1655761268674 size: 165 magic: 2 compresscodec: none crc: 1118624748 isvalid: true\n" +
                     "| offset: 933607637 CreateTime: 1655761268674 keySize: 71 valueSize: 24 sequence: 0 headerKeys: []\n" +
                     "| offset: 933607638 CreateTime: 1655761268674 keysize: 71 valuesize: 24 sequence: 1 headerKeys: []\n"
